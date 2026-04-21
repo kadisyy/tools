@@ -445,7 +445,46 @@ function renderMeme(canvas, img, text, style) {
 }
 
 function generateMemes() {
-  // placeholder — will be implemented in Task 4
+  const grid = document.getElementById('meme-grid');
+  grid.innerHTML = '';
+
+  STYLES.forEach(style => {
+    const card = document.createElement('div');
+    card.className = 'meme-card';
+
+    const canvas = document.createElement('canvas');
+    canvas.className = 'meme-canvas';
+    renderMeme(canvas, sourceImage, memeText.value.trim(), style);
+
+    const footer = document.createElement('div');
+    footer.className = 'card-footer';
+
+    const label = document.createElement('div');
+    label.className = 'style-name';
+    label.textContent = style.name;
+
+    const dlBtn = document.createElement('button');
+    dlBtn.className = 'dl-btn';
+    dlBtn.textContent = '↓ SAVE';
+    dlBtn.addEventListener('click', () => downloadCanvas(canvas, `meme-${style.name.toLowerCase().replace(/\s+/g,'-')}.png`));
+
+    footer.appendChild(label);
+    footer.appendChild(dlBtn);
+    card.appendChild(canvas);
+    card.appendChild(footer);
+    grid.appendChild(card);
+  });
+}
+
+function downloadCanvas(canvas, filename) {
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, 'image/png');
 }
 </script>
 
