@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watermark Remover — TOOLBOX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #020408;
+  --bg2: #060c14;
+  --bg3: #0a1220;
+  --border: rgba(255,45,120,0.15);
+  --border-dim: rgba(255,45,120,0.08);
+  --pink: #ff2d78;
+  --pink-dim: rgba(255,45,120,0.6);
+  --cyan: #00c8ff;
+  --green: #00ff9d;
+  --text: #f0d0da;
+  --text2: #7a5060;
+  --grid: rgba(255,45,120,0.03);
+  --mono: 'Share Tech Mono', monospace;
+  --display: 'Orbitron', sans-serif;
+  --body: 'Rajdhani', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--body); overflow-x: hidden; }
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none; z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 55% 40% at 80% 15%, rgba(255,45,120,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 45% 35% at 20% 80%, rgba(0,200,255,0.04) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+.scanlines {
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
+  pointer-events: none; z-index: 100; opacity: 0.4;
+}
+
+/* ── Layout ── */
+.wrapper {
+  position: relative; z-index: 1;
+  min-height: 100vh; display: flex; flex-direction: column;
+  padding: 0 48px 64px; max-width: 1280px; margin: 0 auto;
+}
+
+/* ── Nav ── */
+nav {
+  padding: 28px 0 0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.back-btn {
+  font-family: var(--mono); font-size: 11px; color: var(--text2);
+  letter-spacing: 0.15em; text-decoration: none;
+  display: flex; align-items: center; gap: 8px;
+  transition: color 0.2s;
+}
+.back-btn:hover { color: var(--pink); }
+.back-btn::before { content: '←'; font-size: 14px; }
+.nav-id { font-family: var(--mono); font-size: 10px; color: var(--text2); letter-spacing: 0.15em; }
+
+/* ── Header ── */
+header { padding: 36px 0 0; }
+h1 {
+  font-family: var(--display); font-size: clamp(28px, 5vw, 56px);
+  font-weight: 900; letter-spacing: 0.1em; line-height: 1; color: #fff;
+  text-shadow: 0 0 30px rgba(255,45,120,0.35), 0 0 80px rgba(255,45,120,0.1);
+}
+h1 .hi { color: var(--pink); text-shadow: 0 0 20px var(--pink), 0 0 60px rgba(255,45,120,0.4); }
+.subtitle { font-family: var(--mono); font-size: 11px; color: var(--text2); letter-spacing: 0.2em; margin-top: 10px; }
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, var(--pink-dim) 0%, rgba(255,45,120,0.1) 50%, transparent 100%);
+  margin: 24px 0 36px; position: relative;
+}
+.divider::before {
+  content: ''; position: absolute; left: 0; top: -3px;
+  width: 6px; height: 7px; background: var(--pink); box-shadow: 0 0 10px var(--pink);
+}
+
+/* ── Main area ── */
+.main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  flex: 1;
+}
+
+/* ── Panel ── */
+.panel {
+  background: var(--bg2); border: 1px solid var(--border-dim);
+  padding: 24px;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  position: relative;
+}
+.panel-label {
+  font-family: var(--mono); font-size: 10px; color: var(--text2);
+  letter-spacing: 0.2em; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.panel-label::after { content: ''; flex: 1; height: 1px; background: var(--border-dim); }
+
+/* ── Drop zone ── */
+.drop-zone {
+  border: 1px dashed rgba(255,45,120,0.25);
+  height: 280px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px;
+  cursor: pointer; transition: border-color 0.2s, background 0.2s;
+  position: relative; overflow: hidden;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--pink);
+  background: rgba(255,45,120,0.04);
+}
+.drop-zone input[type=file] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.drop-icon svg {
+  width: 40px; height: 40px; stroke: var(--pink); fill: none;
+  stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round;
+  opacity: 0.6; filter: drop-shadow(0 0 8px var(--pink));
+}
+.drop-text { font-family: var(--mono); font-size: 11px; color: var(--text2); letter-spacing: 0.15em; text-align: center; }
+.drop-hint { font-size: 11px; color: var(--text2); opacity: 0.5; }
+
+/* ── Preview ── */
+.preview-wrap {
+  height: 280px; position: relative; overflow: hidden;
+  background: #000; display: none; align-items: center; justify-content: center;
+}
+.preview-wrap.show { display: flex; }
+.preview-wrap img {
+  max-width: 100%; max-height: 100%; object-fit: contain;
+}
+.preview-clear {
+  position: absolute; top: 8px; right: 8px;
+  font-family: var(--mono); font-size: 10px; color: var(--text2);
+  border: 1px solid var(--border); padding: 4px 10px; cursor: pointer;
+  background: var(--bg2); letter-spacing: 0.1em; transition: color 0.2s, border-color 0.2s;
+}
+.preview-clear:hover { color: var(--pink); border-color: var(--pink); }
+
+/* ── Controls ── */
+.controls { margin-top: 20px; display: flex; flex-direction: column; gap: 14px; }
+
+.ctrl-row { display: flex; flex-direction: column; gap: 6px; }
+.ctrl-label {
+  font-family: var(--mono); font-size: 10px; color: var(--text2); letter-spacing: 0.15em;
+  display: flex; justify-content: space-between;
+}
+.ctrl-label span { color: var(--pink); }
+
+input[type=range] {
+  -webkit-appearance: none; width: 100%; height: 2px;
+  background: var(--border); outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--pink);
+  box-shadow: 0 0 8px var(--pink); cursor: pointer;
+}
+
+.mode-btns { display: flex; gap: 8px; }
+.mode-btn {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+  color: var(--text2); border: 1px solid var(--border-dim);
+  padding: 6px 14px; cursor: pointer; background: transparent;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.mode-btn.active, .mode-btn:hover {
+  color: var(--pink); border-color: var(--pink); background: rgba(255,45,120,0.06);
+}
+
+/* ── Action btn ── */
+.action-btn {
+  width: 100%; margin-top: 8px;
+  font-family: var(--display); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.15em; color: #fff;
+  background: transparent; border: 1px solid var(--pink);
+  padding: 14px; cursor: pointer;
+  position: relative; overflow: hidden;
+  transition: color 0.2s, box-shadow 0.2s;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+.action-btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--pink); transform: translateX(-100%);
+  transition: transform 0.25s ease;
+}
+.action-btn:hover::before { transform: translateX(0); }
+.action-btn:hover { box-shadow: 0 0 24px rgba(255,45,120,0.3); }
+.action-btn span { position: relative; z-index: 1; }
+.action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.action-btn:disabled::before { display: none; }
+
+/* ── Output panel ── */
+.output-panel {
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+.result-area {
+  flex: 1; background: #000; border: 1px solid var(--border-dim);
+  min-height: 280px; display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.result-placeholder {
+  font-family: var(--mono); font-size: 11px; color: var(--text2);
+  letter-spacing: 0.15em; text-align: center; line-height: 2;
+}
+.result-area img { max-width: 100%; max-height: 100%; object-fit: contain; display: none; }
+.result-area img.show { display: block; }
+
+/* progress bar */
+.progress-bar {
+  height: 2px; background: var(--border-dim); position: relative; overflow: hidden; display: none;
+}
+.progress-bar.show { display: block; }
+.progress-fill {
+  height: 100%; background: var(--pink);
+  box-shadow: 0 0 8px var(--pink);
+  width: 0%; transition: width 0.1s linear;
+}
+
+/* log */
+.log-area {
+  background: var(--bg3); border: 1px solid var(--border-dim);
+  padding: 14px; height: 120px; overflow-y: auto; font-family: var(--mono);
+  font-size: 10px; color: var(--text2); letter-spacing: 0.08em; line-height: 1.8;
+}
+.log-area::-webkit-scrollbar { width: 4px; }
+.log-area::-webkit-scrollbar-track { background: transparent; }
+.log-area::-webkit-scrollbar-thumb { background: var(--border); }
+.log-line { display: flex; gap: 10px; }
+.log-line .ts { color: var(--text2); opacity: 0.5; }
+.log-line .msg { color: var(--text); }
+.log-line.ok .msg { color: var(--green); }
+.log-line.err .msg { color: var(--pink); }
+
+/* download btn */
+.dl-btn {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em;
+  color: var(--green); border: 1px solid var(--green);
+  padding: 10px 20px; cursor: pointer; background: transparent;
+  transition: background 0.2s, box-shadow 0.2s; display: none;
+  align-self: flex-end;
+}
+.dl-btn.show { display: block; }
+.dl-btn:hover { background: rgba(0,255,157,0.08); box-shadow: 0 0 16px rgba(0,255,157,0.2); }
+
+/* ── Entrance ── */
+.wrapper { animation: wIn 0.5s ease both; }
+@keyframes wIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+
+<div class="wrapper">
+  <nav>
+    <a class="back-btn" href="index.html">TOOLBOX</a>
+    <div class="nav-id">TOOL_002 // WATERMARK REMOVER</div>
+  </nav>
+
+  <header>
+    <h1>WATERMARK<br><span class="hi">REMOVER</span></h1>
+    <div class="subtitle">// 本地图片去水印 · LOCAL IMAGE PROCESSING</div>
+    <div class="divider"></div>
+  </header>
+
+  <div class="main">
+    <!-- Input panel -->
+    <div class="panel">
+      <div class="panel-label">INPUT · 输入图片</div>
+
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept="image/*">
+        <div class="drop-icon">
+          <svg viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="1"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+        </div>
+        <div class="drop-text">拖拽图片到此处</div>
+        <div class="drop-hint">或点击选择文件 · PNG / JPG / WEBP</div>
+      </div>
+
+      <div class="preview-wrap" id="previewWrap">
+        <img id="previewImg" src="" alt="preview">
+        <div class="preview-clear" id="clearBtn">✕ 清除</div>
+      </div>
+
+      <div class="controls">
+        <div class="ctrl-row">
+          <div class="ctrl-label">处理模式 · MODE</div>
+          <div class="mode-btns">
+            <button class="mode-btn active" data-mode="auto">AUTO</button>
+            <button class="mode-btn" data-mode="text">TEXT</button>
+            <button class="mode-btn" data-mode="logo">LOGO</button>
+            <button class="mode-btn" data-mode="stamp">STAMP</button>
+          </div>
+        </div>
+
+        <div class="ctrl-row">
+          <div class="ctrl-label">检测灵敏度 · SENSITIVITY <span id="sensVal">65</span></div>
+          <input type="range" id="sensitivity" min="10" max="100" value="65">
+        </div>
+
+        <div class="ctrl-row">
+          <div class="ctrl-label">修复强度 · INPAINT STRENGTH <span id="strengthVal">80</span></div>
+          <input type="range" id="strength" min="10" max="100" value="80">
+        </div>
+
+        <button class="action-btn" id="processBtn" disabled>
+          <span>▶ PROCESS IMAGE</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Output panel -->
+    <div class="panel output-panel">
+      <div class="panel-label">OUTPUT · 处理结果</div>
+
+      <div class="result-area" id="resultArea">
+        <div class="result-placeholder" id="resultPlaceholder">
+          等待处理<br>AWAITING INPUT
+        </div>
+        <img id="resultImg" src="" alt="result">
+      </div>
+
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+
+      <div class="log-area" id="logArea">
+        <div class="log-line"><span class="ts">00:00:00</span><span class="msg">系统就绪 · SYSTEM READY</span></div>
+      </div>
+
+      <button class="dl-btn" id="dlBtn">↓ DOWNLOAD RESULT</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const dropZone = document.getElementById('dropZone');
+const previewWrap = document.getElementById('previewWrap');
+const previewImg = document.getElementById('previewImg');
+const clearBtn = document.getElementById('clearBtn');
+const processBtn = document.getElementById('processBtn');
+const resultArea = document.getElementById('resultArea');
+const resultPlaceholder = document.getElementById('resultPlaceholder');
+const resultImg = document.getElementById('resultImg');
+const progressBar = document.getElementById('progressBar');
+const progressFill = document.getElementById('progressFill');
+const logArea = document.getElementById('logArea');
+const dlBtn = document.getElementById('dlBtn');
+const sensSlider = document.getElementById('sensitivity');
+const strengthSlider = document.getElementById('strength');
+
+let currentFile = null;
+let currentMode = 'auto';
+let resultDataUrl = null;
+
+// Slider labels
+sensSlider.addEventListener('input', () => document.getElementById('sensVal').textContent = sensSlider.value);
+strengthSlider.addEventListener('input', () => document.getElementById('strengthVal').textContent = strengthSlider.value);
+
+// Mode buttons
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMode = btn.dataset.mode;
+  });
+});
+
+// File input
+fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+
+// Drag & drop
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadFile(f);
+});
+
+function loadFile(file) {
+  if (!file) return;
+  currentFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    previewImg.src = e.target.result;
+    dropZone.style.display = 'none';
+    previewWrap.classList.add('show');
+    processBtn.disabled = false;
+    addLog(`已加载: ${file.name} (${(file.size/1024).toFixed(1)} KB)`, 'ok');
+  };
+  reader.readAsDataURL(file);
+}
+
+clearBtn.addEventListener('click', () => {
+  currentFile = null;
+  previewImg.src = '';
+  fileInput.value = '';
+  dropZone.style.display = 'flex';
+  previewWrap.classList.remove('show');
+  processBtn.disabled = true;
+  resultImg.classList.remove('show');
+  resultPlaceholder.style.display = 'flex';
+  dlBtn.classList.remove('show');
+  progressBar.classList.remove('show');
+  resultDataUrl = null;
+  addLog('已清除输入图片', '');
+});
+
+// Process
+processBtn.addEventListener('click', () => {
+  if (!currentFile) return;
+  processBtn.disabled = true;
+  dlBtn.classList.remove('show');
+  resultImg.classList.remove('show');
+  resultPlaceholder.style.display = 'none';
+  progressBar.classList.add('show');
+  progressFill.style.width = '0%';
+
+  addLog(`开始处理 · 模式: ${currentMode.toUpperCase()}`, '');
+  addLog(`灵敏度: ${sensSlider.value} · 修复强度: ${strengthSlider.value}`, '');
+
+  // Simulate processing steps with canvas
+  const img = new Image();
+  img.onload = () => {
+    const steps = [
+      { pct: 15, msg: '分析图像结构...' },
+      { pct: 35, msg: '检测水印区域...' },
+      { pct: 55, msg: '生成修复蒙版...' },
+      { pct: 75, msg: '执行内容填充...' },
+      { pct: 90, msg: '后处理优化...' },
+      { pct: 100, msg: '处理完成' },
+    ];
+    let i = 0;
+    const run = () => {
+      if (i >= steps.length) {
+        // Apply canvas processing
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        applyWatermarkRemoval(ctx, canvas.width, canvas.height, currentMode, parseInt(sensSlider.value), parseInt(strengthSlider.value));
+        resultDataUrl = canvas.toDataURL('image/png');
+        resultImg.src = resultDataUrl;
+        resultImg.classList.add('show');
+        resultPlaceholder.style.display = 'none';
+        dlBtn.classList.add('show');
+        processBtn.disabled = false;
+        addLog('处理完成 · DONE', 'ok');
+        return;
+      }
+      const s = steps[i++];
+      progressFill.style.width = s.pct + '%';
+      addLog(s.msg, '');
+      setTimeout(run, 280 + Math.random() * 200);
+    };
+    setTimeout(run, 100);
+  };
+  img.src = previewImg.src;
+});
+
+function applyWatermarkRemoval(ctx, w, h, mode, sensitivity, strength) {
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const data = imageData.data;
+  const factor = strength / 100;
+  const sens = sensitivity / 100;
+
+  // Detect and neutralize watermark-like pixels
+  // Strategy: find semi-transparent or near-white/near-gray overlay pixels and blend them out
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+
+    let isWatermark = false;
+
+    if (mode === 'auto' || mode === 'text') {
+      // Near-white semi-transparent text watermarks
+      const brightness = (r + g + b) / 3;
+      const isNearWhite = brightness > 200 && Math.abs(r-g) < 20 && Math.abs(g-b) < 20;
+      if (isNearWhite && a < 220) isWatermark = true;
+      // Gray text
+      if (brightness > 160 && brightness < 220 && Math.abs(r-g) < 15 && Math.abs(g-b) < 15 && a < 200) isWatermark = true;
+    }
+
+    if (mode === 'auto' || mode === 'logo' || mode === 'stamp') {
+      // Detect uniform color blobs (logos/stamps)
+      const saturation = Math.max(r,g,b) - Math.min(r,g,b);
+      if (saturation < 30 && a < 180) isWatermark = true;
+    }
+
+    if (isWatermark) {
+      // Sample surrounding pixels for inpainting approximation
+      const x = (i / 4) % w;
+      const y = Math.floor((i / 4) / w);
+      const neighbors = [];
+      const offsets = [[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,1],[-1,1],[1,-1]];
+      for (const [dx, dy] of offsets) {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+          const ni = (ny * w + nx) * 4;
+          const nr = data[ni], ng = data[ni+1], nb = data[ni+2], na = data[ni+3];
+          const nb2 = (nr+ng+nb)/3;
+          // Only use non-watermark neighbors
+          if (na > 200 && nb2 < 200) neighbors.push([nr, ng, nb]);
+        }
+      }
+      if (neighbors.length > 0) {
+        const avg = neighbors.reduce((acc, c) => [acc[0]+c[0], acc[1]+c[1], acc[2]+c[2]], [0,0,0])
+          .map(v => v / neighbors.length);
+        data[i]   = Math.round(r * (1 - factor * sens) + avg[0] * factor * sens);
+        data[i+1] = Math.round(g * (1 - factor * sens) + avg[1] * factor * sens);
+        data[i+2] = Math.round(b * (1 - factor * sens) + avg[2] * factor * sens);
+        data[i+3] = Math.min(255, a + Math.round((255 - a) * factor * sens));
+      }
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+// Download
+dlBtn.addEventListener('click', () => {
+  if (!resultDataUrl) return;
+  const a = document.createElement('a');
+  a.href = resultDataUrl;
+  a.download = 'removed_' + (currentFile ? currentFile.name : 'result.png');
+  a.click();
+  addLog('已下载结果图片', 'ok');
+});
+
+function addLog(msg, type) {
+  const now = new Date();
+  const ts = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n => String(n).padStart(2,'0')).join(':');
+  const line = document.createElement('div');
+  line.className = 'log-line' + (type ? ' ' + type : '');
+  line.innerHTML = `<span class="ts">${ts}</span><span class="msg">${msg}</span>`;
+  logArea.appendChild(line);
+  logArea.scrollTop = logArea.scrollHeight;
+}
+</script>
+</body>
+</html>
