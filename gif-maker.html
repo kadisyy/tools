@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GIF Maker — TOOLBOX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0f4ff;
+  --surface: #ffffff;
+  --surface2: #f7f9ff;
+  --border: #dde4f5;
+  --border2: #c8d4f0;
+  --blue: #0057ff;
+  --blue2: #00aaff;
+  --pink: #ff2d78;
+  --green: #00c97a;
+  --purple: #7c3aed;
+  --text: #0a0e1a;
+  --text2: #4a5578;
+  --text3: #8896b8;
+  --mono: 'Space Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,87,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,87,255,0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none; z-index: 0;
+}
+
+.app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; }
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 32px; border-bottom: 1px solid var(--border);
+  background: rgba(240,244,255,0.85); backdrop-filter: blur(12px);
+  flex-shrink: 0;
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.back-btn {
+  font-family: var(--mono); font-size: 11px; color: var(--text3);
+  text-decoration: none; letter-spacing: 0.1em;
+  border: 1px solid var(--border2); padding: 6px 14px;
+  background: var(--surface); transition: all 0.15s;
+}
+.back-btn:hover { color: var(--blue); border-color: var(--blue); }
+.header-title { font-family: var(--sans); font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+.header-badge {
+  font-family: var(--mono); font-size: 10px; color: var(--green);
+  border: 1px solid var(--green); padding: 3px 10px; letter-spacing: 0.1em;
+}
+
+.main { display: flex; flex: 1; overflow: hidden; }
+
+.panel {
+  width: 320px; flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  overflow-y: auto; padding: 24px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.section-label {
+  font-family: var(--mono); font-size: 10px; color: var(--text3);
+  letter-spacing: 0.15em; margin-bottom: 10px;
+}
+
+.upload-zone {
+  border: 2px dashed var(--border2); padding: 32px 16px;
+  text-align: center; cursor: pointer; transition: all 0.2s;
+  background: var(--surface2); position: relative;
+}
+.upload-zone:hover, .upload-zone.drag-over { border-color: var(--blue); background: rgba(0,87,255,0.04); }
+.upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-icon { font-size: 28px; margin-bottom: 8px; }
+.upload-hint { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.upload-preview { width: 100%; aspect-ratio: 1; object-fit: cover; display: none; margin-top: 12px; }
+
+.effect-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+.effect-btn {
+  padding: 10px 8px; border: 1px solid var(--border2);
+  background: var(--surface2); cursor: pointer;
+  font-family: var(--mono); font-size: 10px; color: var(--text2);
+  letter-spacing: 0.08em; text-align: center; transition: all 0.15s;
+}
+.effect-btn:hover { border-color: var(--blue); color: var(--blue); }
+.effect-btn.active { border-color: var(--blue); background: var(--blue); color: #fff; }
+
+.speed-row { display: flex; gap: 8px; }
+.speed-btn {
+  flex: 1; padding: 8px 4px; border: 1px solid var(--border2);
+  background: var(--surface2); cursor: pointer;
+  font-family: var(--mono); font-size: 10px; color: var(--text2);
+  letter-spacing: 0.08em; text-align: center; transition: all 0.15s;
+}
+.speed-btn:hover { border-color: var(--green); color: var(--green); }
+.speed-btn.active { border-color: var(--green); background: var(--green); color: #fff; }
+
+.gen-btn {
+  width: 100%; padding: 14px;
+  background: var(--blue); color: #fff;
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em;
+  border: none; cursor: pointer; transition: all 0.15s;
+}
+.gen-btn:hover { background: #0044cc; }
+.gen-btn:disabled { background: var(--border2); cursor: not-allowed; color: var(--text3); }
+
+.right-area {
+  flex: 1; overflow-y: auto; padding: 32px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+}
+
+.preview-wrap { position: relative; display: none; }
+.preview-canvas {
+  display: block; border: 1px solid var(--border);
+  max-width: 480px; max-height: 480px;
+}
+
+.progress-wrap { width: 100%; max-width: 480px; display: none; flex-direction: column; gap: 8px; }
+.progress-label { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.1em; }
+.progress-bar-bg { height: 4px; background: var(--border); width: 100%; }
+.progress-bar-fill { height: 4px; background: var(--blue); width: 0%; transition: width 0.1s; }
+
+.dl-btn {
+  font-family: var(--mono); font-size: 12px; color: var(--green);
+  background: none; border: 1px solid var(--green); padding: 12px 32px;
+  cursor: pointer; letter-spacing: 0.1em; transition: all 0.15s; display: none;
+}
+.dl-btn:hover { background: var(--green); color: #fff; }
+
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  color: var(--text3); font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em;
+}
+.empty-icon { font-size: 48px; opacity: 0.3; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="header-left">
+      <a href="index.html" class="back-btn">← BACK</a>
+      <div class="header-title">GIF MAKER</div>
+      <div class="header-badge">TOOL_004</div>
+    </div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.1em;">ANIMATE · LOCAL · FREE</div>
+  </header>
+
+  <div class="main">
+    <div class="panel">
+      <div>
+        <div class="section-label">01 / UPLOAD IMAGE</div>
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="fileInput" accept="image/*">
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-hint">CLICK OR DRAG IMAGE HERE</div>
+        </div>
+        <img class="upload-preview" id="imgPreview" alt="preview">
+      </div>
+
+      <div>
+        <div class="section-label">02 / CHOOSE EFFECT</div>
+        <div class="effect-grid">
+          <button class="effect-btn active" data-effect="shake">SHAKE</button>
+          <button class="effect-btn" data-effect="blink">BLINK</button>
+          <button class="effect-btn" data-effect="fade">FADE IN/OUT</button>
+          <button class="effect-btn" data-effect="zoom">ZOOM PULSE</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">03 / SPEED</div>
+        <div class="speed-row">
+          <button class="speed-btn" data-speed="slow">SLOW</button>
+          <button class="speed-btn active" data-speed="medium">MED</button>
+          <button class="speed-btn" data-speed="fast">FAST</button>
+        </div>
+      </div>
+
+      <button class="gen-btn" id="genBtn" disabled>GENERATE GIF →</button>
+    </div>
+
+    <div class="right-area" id="rightArea">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">🎞️</div>
+        <div>UPLOAD AN IMAGE TO START</div>
+      </div>
+      <div class="preview-wrap" id="previewWrap">
+        <canvas class="preview-canvas" id="previewCanvas"></canvas>
+      </div>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-label" id="progressLabel">GENERATING... 0%</div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      </div>
+      <button class="dl-btn" id="dlBtn">↓ DOWNLOAD GIF</button>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+<script>
+// JS added in Tasks 2-4
+</script>
+</body>
+</html>
