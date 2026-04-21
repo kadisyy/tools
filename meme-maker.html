@@ -286,6 +286,55 @@ main {
 </div>
 
 <script>
+const fileInput = document.getElementById('file-input');
+const uploadZone = document.getElementById('upload-zone');
+const preview = document.getElementById('img-preview');
+const memeText = document.getElementById('meme-text');
+const genBtn = document.getElementById('gen-btn');
+const gridArea = document.getElementById('meme-grid');
+
+let sourceImage = null;
+
+function loadImage(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      sourceImage = img;
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+      uploadZone.querySelector('.upload-icon').style.display = 'none';
+      uploadZone.querySelector('.upload-hint').style.display = 'none';
+      checkReady();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+uploadZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => loadImage(e.target.files[0]));
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  loadImage(e.dataTransfer.files[0]);
+});
+
+memeText.addEventListener('input', checkReady);
+
+function checkReady() {
+  genBtn.disabled = !(sourceImage && memeText.value.trim());
+}
+
+genBtn.addEventListener('click', generateMemes);
+
+function generateMemes() {
+  // placeholder — will be implemented in Task 4
+}
 </script>
 
 </body>
