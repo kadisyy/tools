@@ -5,54 +5,51 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Watermark Remover — TOOLBOX</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #020408;
-  --bg2: #060c14;
-  --bg3: #0a1220;
-  --border: rgba(255,45,120,0.15);
-  --border-dim: rgba(255,45,120,0.08);
+  --bg: #f0f4ff;
+  --surface: #ffffff;
+  --surface2: #f7f9ff;
+  --border: #dde4f5;
+  --border2: #c8d4f0;
   --pink: #ff2d78;
-  --pink-dim: rgba(255,45,120,0.6);
-  --cyan: #00c8ff;
-  --green: #00ff9d;
-  --text: #f0d0da;
-  --text2: #7a5060;
-  --grid: rgba(255,45,120,0.03);
-  --mono: 'Share Tech Mono', monospace;
-  --display: 'Orbitron', sans-serif;
-  --body: 'Rajdhani', sans-serif;
+  --pink-light: rgba(255,45,120,0.06);
+  --pink-mid: rgba(255,45,120,0.12);
+  --blue: #0057ff;
+  --green: #00c97a;
+  --red: #ff3d3d;
+  --text: #0a0e1a;
+  --text2: #4a5578;
+  --text3: #8896b8;
+  --mono: 'Space Mono', monospace;
+  --sans: 'Syne', sans-serif;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--body); overflow-x: hidden; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
 
 body::before {
   content: '';
   position: fixed; inset: 0;
-  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 48px 48px;
+  background-image:
+    linear-gradient(rgba(0,87,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,87,255,0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
   pointer-events: none; z-index: 0;
 }
 body::after {
   content: '';
   position: fixed; inset: 0;
   background:
-    radial-gradient(ellipse 55% 40% at 80% 15%, rgba(255,45,120,0.06) 0%, transparent 70%),
-    radial-gradient(ellipse 45% 35% at 20% 80%, rgba(0,200,255,0.04) 0%, transparent 70%);
+    radial-gradient(ellipse 50% 40% at 90% 10%, rgba(255,45,120,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 35% at 10% 80%, rgba(0,87,255,0.05) 0%, transparent 70%);
   pointer-events: none; z-index: 0;
 }
-.scanlines {
-  position: fixed; inset: 0;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
-  pointer-events: none; z-index: 100; opacity: 0.4;
-}
 
-/* ── Layout ── */
 .wrapper {
   position: relative; z-index: 1;
   min-height: 100vh; display: flex; flex-direction: column;
-  padding: 0 48px 64px; max-width: 1280px; margin: 0 auto;
+  max-width: 1280px; margin: 0 auto; padding: 0 44px 64px;
 }
 
 /* ── Nav ── */
@@ -61,211 +58,183 @@ nav {
   display: flex; align-items: center; justify-content: space-between;
 }
 .back-btn {
-  font-family: var(--mono); font-size: 11px; color: var(--text2);
-  letter-spacing: 0.15em; text-decoration: none;
+  font-family: var(--mono); font-size: 11px; color: var(--text3);
+  letter-spacing: 0.12em; text-decoration: none;
   display: flex; align-items: center; gap: 8px;
   transition: color 0.2s;
 }
 .back-btn:hover { color: var(--pink); }
 .back-btn::before { content: '←'; font-size: 14px; }
-.nav-id { font-family: var(--mono); font-size: 10px; color: var(--text2); letter-spacing: 0.15em; }
+.nav-id { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.15em; }
 
 /* ── Header ── */
-header { padding: 36px 0 0; }
+header { padding: 32px 0 0; }
 h1 {
-  font-family: var(--display); font-size: clamp(28px, 5vw, 56px);
-  font-weight: 900; letter-spacing: 0.1em; line-height: 1; color: #fff;
-  text-shadow: 0 0 30px rgba(255,45,120,0.35), 0 0 80px rgba(255,45,120,0.1);
+  font-family: var(--sans); font-size: clamp(28px, 4.5vw, 52px);
+  font-weight: 800; letter-spacing: -0.01em; line-height: 1.1; color: var(--text);
 }
-h1 .hi { color: var(--pink); text-shadow: 0 0 20px var(--pink), 0 0 60px rgba(255,45,120,0.4); }
-.subtitle { font-family: var(--mono); font-size: 11px; color: var(--text2); letter-spacing: 0.2em; margin-top: 10px; }
+h1 .accent {
+  background: linear-gradient(135deg, var(--pink) 0%, #ff6fa8 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.subtitle { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.18em; margin-top: 10px; }
 
 .divider {
-  height: 1px;
-  background: linear-gradient(90deg, var(--pink-dim) 0%, rgba(255,45,120,0.1) 50%, transparent 100%);
-  margin: 24px 0 36px; position: relative;
-}
-.divider::before {
-  content: ''; position: absolute; left: 0; top: -3px;
-  width: 6px; height: 7px; background: var(--pink); box-shadow: 0 0 10px var(--pink);
+  height: 2px; margin: 24px 0 32px;
+  background: linear-gradient(90deg, var(--pink) 0%, rgba(255,45,120,0.15) 100%);
+  border-radius: 2px;
 }
 
-/* ── Main area ── */
+/* ── Main ── */
 .main {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  flex: 1;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 24px; flex: 1;
 }
 
 /* ── Panel ── */
 .panel {
-  background: var(--bg2); border: 1px solid var(--border-dim);
-  padding: 24px;
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
-  position: relative;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 4px; padding: 24px; display: flex; flex-direction: column; gap: 16px;
 }
 .panel-label {
-  font-family: var(--mono); font-size: 10px; color: var(--text2);
-  letter-spacing: 0.2em; margin-bottom: 16px;
-  display: flex; align-items: center; gap: 10px;
+  font-family: var(--mono); font-size: 10px; color: var(--text3);
+  letter-spacing: 0.2em; display: flex; align-items: center; gap: 12px;
 }
-.panel-label::after { content: ''; flex: 1; height: 1px; background: var(--border-dim); }
+.panel-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
 /* ── Drop zone ── */
 .drop-zone {
-  border: 1px dashed rgba(255,45,120,0.25);
-  height: 280px; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 14px;
+  border: 2px dashed var(--border2); border-radius: 4px;
+  height: 260px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px;
   cursor: pointer; transition: border-color 0.2s, background 0.2s;
   position: relative; overflow: hidden;
 }
 .drop-zone:hover, .drop-zone.drag-over {
-  border-color: var(--pink);
-  background: rgba(255,45,120,0.04);
+  border-color: var(--pink); background: var(--pink-light);
 }
 .drop-zone input[type=file] {
   position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
 }
 .drop-icon svg {
-  width: 40px; height: 40px; stroke: var(--pink); fill: none;
-  stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round;
-  opacity: 0.6; filter: drop-shadow(0 0 8px var(--pink));
+  width: 36px; height: 36px; stroke: var(--pink); fill: none;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
 }
-.drop-text { font-family: var(--mono); font-size: 11px; color: var(--text2); letter-spacing: 0.15em; text-align: center; }
-.drop-hint { font-size: 11px; color: var(--text2); opacity: 0.5; }
+.drop-text { font-family: var(--mono); font-size: 11px; color: var(--text2); letter-spacing: 0.12em; }
+.drop-hint { font-size: 12px; color: var(--text3); }
 
 /* ── Preview ── */
 .preview-wrap {
-  height: 280px; position: relative; overflow: hidden;
-  background: #000; display: none; align-items: center; justify-content: center;
+  height: 260px; position: relative; overflow: hidden;
+  background: var(--surface2); border: 1.5px solid var(--border);
+  border-radius: 4px; display: none; align-items: center; justify-content: center;
 }
 .preview-wrap.show { display: flex; }
-.preview-wrap img {
-  max-width: 100%; max-height: 100%; object-fit: contain;
-}
+.preview-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .preview-clear {
-  position: absolute; top: 8px; right: 8px;
-  font-family: var(--mono); font-size: 10px; color: var(--text2);
-  border: 1px solid var(--border); padding: 4px 10px; cursor: pointer;
-  background: var(--bg2); letter-spacing: 0.1em; transition: color 0.2s, border-color 0.2s;
+  position: absolute; top: 10px; right: 10px;
+  font-family: var(--mono); font-size: 10px; color: var(--text3);
+  border: 1px solid var(--border2); padding: 4px 10px; cursor: pointer;
+  background: var(--surface); letter-spacing: 0.1em;
+  transition: color 0.2s, border-color 0.2s;
 }
 .preview-clear:hover { color: var(--pink); border-color: var(--pink); }
 
 /* ── Controls ── */
-.controls { margin-top: 20px; display: flex; flex-direction: column; gap: 14px; }
-
-.ctrl-row { display: flex; flex-direction: column; gap: 6px; }
+.ctrl-row { display: flex; flex-direction: column; gap: 8px; }
 .ctrl-label {
-  font-family: var(--mono); font-size: 10px; color: var(--text2); letter-spacing: 0.15em;
-  display: flex; justify-content: space-between;
+  font-family: var(--mono); font-size: 10px; color: var(--text3);
+  letter-spacing: 0.15em; display: flex; justify-content: space-between;
 }
-.ctrl-label span { color: var(--pink); }
+.ctrl-label span { color: var(--pink); font-weight: 700; }
 
 input[type=range] {
-  -webkit-appearance: none; width: 100%; height: 2px;
-  background: var(--border); outline: none; cursor: pointer;
+  -webkit-appearance: none; width: 100%; height: 3px;
+  background: var(--border2); outline: none; cursor: pointer; border-radius: 2px;
 }
 input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 14px; height: 14px;
-  border-radius: 50%; background: var(--pink);
-  box-shadow: 0 0 8px var(--pink); cursor: pointer;
+  -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--pink); box-shadow: 0 0 0 3px rgba(255,45,120,0.15); cursor: pointer;
 }
 
-.mode-btns { display: flex; gap: 8px; }
+.mode-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .mode-btn {
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
-  color: var(--text2); border: 1px solid var(--border-dim);
-  padding: 6px 14px; cursor: pointer; background: transparent;
-  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+  color: var(--text3); border: 1.5px solid var(--border2);
+  padding: 6px 14px; cursor: pointer; background: var(--surface2);
+  border-radius: 2px; transition: all 0.18s;
 }
 .mode-btn.active, .mode-btn:hover {
-  color: var(--pink); border-color: var(--pink); background: rgba(255,45,120,0.06);
+  color: var(--pink); border-color: var(--pink); background: var(--pink-light);
 }
 
 /* ── Action btn ── */
 .action-btn {
-  width: 100%; margin-top: 8px;
-  font-family: var(--display); font-size: 12px; font-weight: 700;
-  letter-spacing: 0.15em; color: #fff;
-  background: transparent; border: 1px solid var(--pink);
-  padding: 14px; cursor: pointer;
-  position: relative; overflow: hidden;
-  transition: color 0.2s, box-shadow 0.2s;
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  width: 100%; font-family: var(--sans); font-size: 14px; font-weight: 700;
+  letter-spacing: 0.08em; color: #fff;
+  background: linear-gradient(135deg, var(--pink) 0%, #ff6fa8 100%);
+  border: none; padding: 14px; cursor: pointer; border-radius: 4px;
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(255,45,120,0.25);
 }
-.action-btn::before {
-  content: ''; position: absolute; inset: 0;
-  background: var(--pink); transform: translateX(-100%);
-  transition: transform 0.25s ease;
-}
-.action-btn:hover::before { transform: translateX(0); }
-.action-btn:hover { box-shadow: 0 0 24px rgba(255,45,120,0.3); }
-.action-btn span { position: relative; z-index: 1; }
-.action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.action-btn:disabled::before { display: none; }
+.action-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(255,45,120,0.35); }
+.action-btn:active { transform: translateY(0); }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 
-/* ── Output panel ── */
-.output-panel {
-  display: flex; flex-direction: column; gap: 16px;
-}
-
+/* ── Output ── */
 .result-area {
-  flex: 1; background: #000; border: 1px solid var(--border-dim);
-  min-height: 280px; display: flex; align-items: center; justify-content: center;
-  position: relative; overflow: hidden;
+  flex: 1; background: var(--surface2); border: 1.5px solid var(--border);
+  border-radius: 4px; min-height: 260px;
+  display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
 }
 .result-placeholder {
-  font-family: var(--mono); font-size: 11px; color: var(--text2);
-  letter-spacing: 0.15em; text-align: center; line-height: 2;
+  font-family: var(--mono); font-size: 11px; color: var(--text3);
+  letter-spacing: 0.15em; text-align: center; line-height: 2.2;
 }
 .result-area img { max-width: 100%; max-height: 100%; object-fit: contain; display: none; }
 .result-area img.show { display: block; }
 
-/* progress bar */
-.progress-bar {
-  height: 2px; background: var(--border-dim); position: relative; overflow: hidden; display: none;
-}
+/* progress */
+.progress-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; display: none; }
 .progress-bar.show { display: block; }
 .progress-fill {
-  height: 100%; background: var(--pink);
-  box-shadow: 0 0 8px var(--pink);
-  width: 0%; transition: width 0.1s linear;
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--pink), #ff6fa8);
+  border-radius: 2px; transition: width 0.12s linear;
 }
 
 /* log */
 .log-area {
-  background: var(--bg3); border: 1px solid var(--border-dim);
-  padding: 14px; height: 120px; overflow-y: auto; font-family: var(--mono);
-  font-size: 10px; color: var(--text2); letter-spacing: 0.08em; line-height: 1.8;
+  background: var(--surface2); border: 1.5px solid var(--border);
+  border-radius: 4px; padding: 14px; height: 110px; overflow-y: auto;
+  font-family: var(--mono); font-size: 10px; color: var(--text3);
+  letter-spacing: 0.06em; line-height: 1.9;
 }
 .log-area::-webkit-scrollbar { width: 4px; }
 .log-area::-webkit-scrollbar-track { background: transparent; }
-.log-area::-webkit-scrollbar-thumb { background: var(--border); }
+.log-area::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 .log-line { display: flex; gap: 10px; }
-.log-line .ts { color: var(--text2); opacity: 0.5; }
-.log-line .msg { color: var(--text); }
+.log-line .ts { color: var(--text3); opacity: 0.6; flex-shrink: 0; }
+.log-line .msg { color: var(--text2); }
 .log-line.ok .msg { color: var(--green); }
-.log-line.err .msg { color: var(--pink); }
+.log-line.err .msg { color: var(--red); }
 
-/* download btn */
+/* download */
 .dl-btn {
-  font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em;
-  color: var(--green); border: 1px solid var(--green);
-  padding: 10px 20px; cursor: pointer; background: transparent;
-  transition: background 0.2s, box-shadow 0.2s; display: none;
-  align-self: flex-end;
+  font-family: var(--sans); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.06em; color: var(--green);
+  border: 1.5px solid var(--green); padding: 10px 20px;
+  cursor: pointer; background: transparent; border-radius: 4px;
+  transition: background 0.2s, box-shadow 0.2s; display: none; align-self: flex-end;
 }
 .dl-btn.show { display: block; }
-.dl-btn:hover { background: rgba(0,255,157,0.08); box-shadow: 0 0 16px rgba(0,255,157,0.2); }
+.dl-btn:hover { background: rgba(0,201,122,0.08); box-shadow: 0 4px 16px rgba(0,201,122,0.2); }
 
-/* ── Entrance ── */
+/* entrance */
 .wrapper { animation: wIn 0.5s ease both; }
-@keyframes wIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+@keyframes wIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 </style>
 </head>
 <body>
-<div class="scanlines"></div>
 
 <div class="wrapper">
   <nav>
@@ -274,13 +243,13 @@ input[type=range]::-webkit-slider-thumb {
   </nav>
 
   <header>
-    <h1>WATERMARK<br><span class="hi">REMOVER</span></h1>
+    <h1>Watermark<br><span class="accent">Remover</span></h1>
     <div class="subtitle">// 本地图片去水印 · LOCAL IMAGE PROCESSING</div>
     <div class="divider"></div>
   </header>
 
   <div class="main">
-    <!-- Input panel -->
+    <!-- Input -->
     <div class="panel">
       <div class="panel-label">INPUT · 输入图片</div>
 
@@ -288,13 +257,13 @@ input[type=range]::-webkit-slider-thumb {
         <input type="file" id="fileInput" accept="image/*">
         <div class="drop-icon">
           <svg viewBox="0 0 24 24">
-            <rect x="3" y="3" width="18" height="18" rx="1"/>
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
             <line x1="12" y1="8" x2="12" y2="16"/>
             <line x1="8" y1="12" x2="16" y2="12"/>
           </svg>
         </div>
         <div class="drop-text">拖拽图片到此处</div>
-        <div class="drop-hint">或点击选择文件 · PNG / JPG / WEBP</div>
+        <div class="drop-hint">或点击选择 · PNG / JPG / WEBP</div>
       </div>
 
       <div class="preview-wrap" id="previewWrap">
@@ -302,41 +271,35 @@ input[type=range]::-webkit-slider-thumb {
         <div class="preview-clear" id="clearBtn">✕ 清除</div>
       </div>
 
-      <div class="controls">
-        <div class="ctrl-row">
-          <div class="ctrl-label">处理模式 · MODE</div>
-          <div class="mode-btns">
-            <button class="mode-btn active" data-mode="auto">AUTO</button>
-            <button class="mode-btn" data-mode="text">TEXT</button>
-            <button class="mode-btn" data-mode="logo">LOGO</button>
-            <button class="mode-btn" data-mode="stamp">STAMP</button>
-          </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label">处理模式 · MODE</div>
+        <div class="mode-btns">
+          <button class="mode-btn active" data-mode="auto">AUTO</button>
+          <button class="mode-btn" data-mode="text">TEXT</button>
+          <button class="mode-btn" data-mode="logo">LOGO</button>
+          <button class="mode-btn" data-mode="stamp">STAMP</button>
         </div>
-
-        <div class="ctrl-row">
-          <div class="ctrl-label">检测灵敏度 · SENSITIVITY <span id="sensVal">65</span></div>
-          <input type="range" id="sensitivity" min="10" max="100" value="65">
-        </div>
-
-        <div class="ctrl-row">
-          <div class="ctrl-label">修复强度 · INPAINT STRENGTH <span id="strengthVal">80</span></div>
-          <input type="range" id="strength" min="10" max="100" value="80">
-        </div>
-
-        <button class="action-btn" id="processBtn" disabled>
-          <span>▶ PROCESS IMAGE</span>
-        </button>
       </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">检测灵敏度 · SENSITIVITY <span id="sensVal">65</span></div>
+        <input type="range" id="sensitivity" min="10" max="100" value="65">
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">修复强度 · INPAINT STRENGTH <span id="strengthVal">80</span></div>
+        <input type="range" id="strength" min="10" max="100" value="80">
+      </div>
+
+      <button class="action-btn" id="processBtn" disabled>▶ PROCESS IMAGE</button>
     </div>
 
-    <!-- Output panel -->
-    <div class="panel output-panel">
+    <!-- Output -->
+    <div class="panel">
       <div class="panel-label">OUTPUT · 处理结果</div>
 
       <div class="result-area" id="resultArea">
-        <div class="result-placeholder" id="resultPlaceholder">
-          等待处理<br>AWAITING INPUT
-        </div>
+        <div class="result-placeholder" id="resultPlaceholder">等待处理<br>AWAITING INPUT</div>
         <img id="resultImg" src="" alt="result">
       </div>
 
@@ -348,7 +311,7 @@ input[type=range]::-webkit-slider-thumb {
         <div class="log-line"><span class="ts">00:00:00</span><span class="msg">系统就绪 · SYSTEM READY</span></div>
       </div>
 
-      <button class="dl-btn" id="dlBtn">↓ DOWNLOAD RESULT</button>
+      <button class="dl-btn" id="dlBtn">↓ 下载结果</button>
     </div>
   </div>
 </div>
@@ -374,11 +337,9 @@ let currentFile = null;
 let currentMode = 'auto';
 let resultDataUrl = null;
 
-// Slider labels
 sensSlider.addEventListener('input', () => document.getElementById('sensVal').textContent = sensSlider.value);
 strengthSlider.addEventListener('input', () => document.getElementById('strengthVal').textContent = strengthSlider.value);
 
-// Mode buttons
 document.querySelectorAll('.mode-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -387,10 +348,8 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
   });
 });
 
-// File input
 fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
 
-// Drag & drop
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
 dropZone.addEventListener('drop', e => {
@@ -414,34 +373,22 @@ function loadFile(file) {
 }
 
 clearBtn.addEventListener('click', () => {
-  currentFile = null;
-  previewImg.src = '';
-  fileInput.value = '';
-  dropZone.style.display = 'flex';
-  previewWrap.classList.remove('show');
-  processBtn.disabled = true;
-  resultImg.classList.remove('show');
-  resultPlaceholder.style.display = 'flex';
-  dlBtn.classList.remove('show');
-  progressBar.classList.remove('show');
-  resultDataUrl = null;
+  currentFile = null; previewImg.src = ''; fileInput.value = '';
+  dropZone.style.display = 'flex'; previewWrap.classList.remove('show');
+  processBtn.disabled = true; resultImg.classList.remove('show');
+  resultPlaceholder.style.display = 'flex'; dlBtn.classList.remove('show');
+  progressBar.classList.remove('show'); resultDataUrl = null;
   addLog('已清除输入图片', '');
 });
 
-// Process
 processBtn.addEventListener('click', () => {
   if (!currentFile) return;
-  processBtn.disabled = true;
-  dlBtn.classList.remove('show');
-  resultImg.classList.remove('show');
-  resultPlaceholder.style.display = 'none';
-  progressBar.classList.add('show');
-  progressFill.style.width = '0%';
-
+  processBtn.disabled = true; dlBtn.classList.remove('show');
+  resultImg.classList.remove('show'); resultPlaceholder.style.display = 'none';
+  progressBar.classList.add('show'); progressFill.style.width = '0%';
   addLog(`开始处理 · 模式: ${currentMode.toUpperCase()}`, '');
   addLog(`灵敏度: ${sensSlider.value} · 修复强度: ${strengthSlider.value}`, '');
 
-  // Simulate processing steps with canvas
   const img = new Image();
   img.onload = () => {
     const steps = [
@@ -455,13 +402,11 @@ processBtn.addEventListener('click', () => {
     let i = 0;
     const run = () => {
       if (i >= steps.length) {
-        // Apply canvas processing
         const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = img.width; canvas.height = img.height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
-        applyWatermarkRemoval(ctx, canvas.width, canvas.height, currentMode, parseInt(sensSlider.value), parseInt(strengthSlider.value));
+        applyRemoval(ctx, canvas.width, canvas.height);
         resultDataUrl = canvas.toDataURL('image/png');
         resultImg.src = resultDataUrl;
         resultImg.classList.add('show');
@@ -474,71 +419,56 @@ processBtn.addEventListener('click', () => {
       const s = steps[i++];
       progressFill.style.width = s.pct + '%';
       addLog(s.msg, '');
-      setTimeout(run, 280 + Math.random() * 200);
+      setTimeout(run, 260 + Math.random() * 180);
     };
-    setTimeout(run, 100);
+    setTimeout(run, 80);
   };
   img.src = previewImg.src;
 });
 
-function applyWatermarkRemoval(ctx, w, h, mode, sensitivity, strength) {
+function applyRemoval(ctx, w, h) {
   const imageData = ctx.getImageData(0, 0, w, h);
   const data = imageData.data;
-  const factor = strength / 100;
-  const sens = sensitivity / 100;
+  const factor = parseInt(strengthSlider.value) / 100;
+  const sens = parseInt(sensSlider.value) / 100;
 
-  // Detect and neutralize watermark-like pixels
-  // Strategy: find semi-transparent or near-white/near-gray overlay pixels and blend them out
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
-
+    const brightness = (r + g + b) / 3;
     let isWatermark = false;
 
-    if (mode === 'auto' || mode === 'text') {
-      // Near-white semi-transparent text watermarks
-      const brightness = (r + g + b) / 3;
-      const isNearWhite = brightness > 200 && Math.abs(r-g) < 20 && Math.abs(g-b) < 20;
-      if (isNearWhite && a < 220) isWatermark = true;
-      // Gray text
+    if (currentMode === 'auto' || currentMode === 'text') {
+      if (brightness > 200 && Math.abs(r-g) < 20 && Math.abs(g-b) < 20 && a < 220) isWatermark = true;
       if (brightness > 160 && brightness < 220 && Math.abs(r-g) < 15 && Math.abs(g-b) < 15 && a < 200) isWatermark = true;
     }
-
-    if (mode === 'auto' || mode === 'logo' || mode === 'stamp') {
-      // Detect uniform color blobs (logos/stamps)
+    if (currentMode === 'auto' || currentMode === 'logo' || currentMode === 'stamp') {
       const saturation = Math.max(r,g,b) - Math.min(r,g,b);
       if (saturation < 30 && a < 180) isWatermark = true;
     }
 
     if (isWatermark) {
-      // Sample surrounding pixels for inpainting approximation
-      const x = (i / 4) % w;
-      const y = Math.floor((i / 4) / w);
+      const x = (i / 4) % w, y = Math.floor((i / 4) / w);
       const neighbors = [];
-      const offsets = [[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,1],[-1,1],[1,-1]];
-      for (const [dx, dy] of offsets) {
-        const nx = x + dx, ny = y + dy;
+      for (const [dx, dy] of [[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,1],[-1,1],[1,-1]]) {
+        const nx = x+dx, ny = y+dy;
         if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-          const ni = (ny * w + nx) * 4;
-          const nr = data[ni], ng = data[ni+1], nb = data[ni+2], na = data[ni+3];
-          const nb2 = (nr+ng+nb)/3;
-          // Only use non-watermark neighbors
-          if (na > 200 && nb2 < 200) neighbors.push([nr, ng, nb]);
+          const ni = (ny*w+nx)*4;
+          const nb = (data[ni]+data[ni+1]+data[ni+2])/3;
+          if (data[ni+3] > 200 && nb < 200) neighbors.push([data[ni], data[ni+1], data[ni+2]]);
         }
       }
       if (neighbors.length > 0) {
-        const avg = neighbors.reduce((acc, c) => [acc[0]+c[0], acc[1]+c[1], acc[2]+c[2]], [0,0,0])
-          .map(v => v / neighbors.length);
-        data[i]   = Math.round(r * (1 - factor * sens) + avg[0] * factor * sens);
-        data[i+1] = Math.round(g * (1 - factor * sens) + avg[1] * factor * sens);
-        data[i+2] = Math.round(b * (1 - factor * sens) + avg[2] * factor * sens);
-        data[i+3] = Math.min(255, a + Math.round((255 - a) * factor * sens));
+        const avg = neighbors.reduce((a,c) => [a[0]+c[0],a[1]+c[1],a[2]+c[2]], [0,0,0]).map(v => v/neighbors.length);
+        data[i]   = Math.round(r*(1-factor*sens) + avg[0]*factor*sens);
+        data[i+1] = Math.round(g*(1-factor*sens) + avg[1]*factor*sens);
+        data[i+2] = Math.round(b*(1-factor*sens) + avg[2]*factor*sens);
+        data[i+3] = Math.min(255, a + Math.round((255-a)*factor*sens));
       }
     }
   }
   ctx.putImageData(imageData, 0, 0);
 }
 
-// Download
 dlBtn.addEventListener('click', () => {
   if (!resultDataUrl) return;
   const a = document.createElement('a');
@@ -552,7 +482,7 @@ function addLog(msg, type) {
   const now = new Date();
   const ts = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n => String(n).padStart(2,'0')).join(':');
   const line = document.createElement('div');
-  line.className = 'log-line' + (type ? ' ' + type : '');
+  line.className = 'log-line' + (type ? ' '+type : '');
   line.innerHTML = `<span class="ts">${ts}</span><span class="msg">${msg}</span>`;
   logArea.appendChild(line);
   logArea.scrollTop = logArea.scrollHeight;
