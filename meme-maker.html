@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meme Maker — TOOLBOX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0f4ff;
+  --surface: #ffffff;
+  --surface2: #f7f9ff;
+  --border: #dde4f5;
+  --border2: #c8d4f0;
+  --blue: #0057ff;
+  --blue2: #00aaff;
+  --pink: #ff2d78;
+  --green: #00c97a;
+  --purple: #7c3aed;
+  --text: #0a0e1a;
+  --text2: #4a5578;
+  --text3: #8896b8;
+  --mono: 'Space Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+/* grid bg */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,87,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,87,255,0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none; z-index: 0;
+}
+
+/* ── App shell ── */
+.app {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  height: 100vh;
+}
+
+/* ── Header ── */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px;
+  height: 56px;
+  background: rgba(240,244,255,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.header-left {
+  display: flex; align-items: center; gap: 20px;
+}
+
+.back-btn {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+  color: var(--text2); text-decoration: none;
+  border: 1px solid var(--border2); padding: 5px 12px;
+  background: var(--surface);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.back-btn:hover {
+  color: var(--blue); border-color: var(--blue);
+  background: rgba(0,87,255,0.04);
+}
+
+.header-title {
+  font-family: var(--mono); font-size: 14px; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--text);
+}
+
+.header-badge {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+  color: var(--blue); border: 1px solid var(--blue);
+  padding: 3px 8px; background: rgba(0,87,255,0.06);
+}
+
+.header-right {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+  color: var(--text3);
+}
+
+/* ── Main ── */
+main {
+  display: flex; flex-direction: row;
+  flex: 1; overflow: hidden;
+}
+
+/* ── Left panel ── */
+.left-panel {
+  width: 320px; flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+  padding: 24px 20px;
+  gap: 20px;
+}
+
+.section-label {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+  color: var(--text3); margin-bottom: 10px;
+}
+
+/* Upload zone */
+.upload-zone {
+  border: 2px dashed var(--border2);
+  background: var(--surface2);
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px;
+  padding: 32px 16px;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+.upload-zone:hover,
+.upload-zone.drag-over {
+  border-color: var(--blue);
+  background: rgba(0,87,255,0.04);
+}
+.upload-zone .upload-icon {
+  font-size: 32px; line-height: 1;
+}
+.upload-hint {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+  color: var(--text3); text-align: center;
+}
+#file-input { display: none; }
+
+/* Image preview */
+#img-preview {
+  display: none;
+  width: 100%; aspect-ratio: 1; object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+/* Text input */
+.text-input {
+  width: 100%; resize: vertical;
+  min-height: 96px;
+  padding: 10px 12px;
+  font-family: var(--mono); font-size: 12px;
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  outline: none;
+  transition: border-color 0.15s;
+  line-height: 1.6;
+}
+.text-input:focus { border-color: var(--blue); }
+.text-input::placeholder { color: var(--text3); }
+
+/* Generate button */
+.gen-btn {
+  width: 100%;
+  padding: 12px;
+  font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 0.12em;
+  color: #fff;
+  background: var(--blue);
+  border: none; cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.gen-btn:hover:not(:disabled) { background: #0044cc; }
+.gen-btn:disabled {
+  background: var(--border2); color: var(--text3); cursor: not-allowed;
+}
+
+/* ── Right grid area ── */
+.right-area {
+  flex: 1; overflow-y: auto;
+  padding: 24px;
+}
+
+.meme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+/* Empty state */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%;
+  min-height: 320px;
+  gap: 14px;
+  color: var(--text3);
+}
+.empty-icon { font-size: 48px; line-height: 1; }
+.empty-text {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+  text-align: center;
+}
+
+/* Meme card */
+.meme-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.meme-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,87,255,0.10);
+}
+.meme-card img {
+  width: 100%; display: block;
+}
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+}
+.card-style-name {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+  color: var(--text3);
+}
+.dl-btn {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+  color: var(--blue);
+  border: 1px solid var(--blue);
+  background: transparent;
+  padding: 4px 10px; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.dl-btn:hover {
+  background: var(--blue); color: #fff;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header>
+    <div class="header-left">
+      <a href="index.html" class="back-btn">← BACK</a>
+      <span class="header-title">MEME MAKER</span>
+      <span class="header-badge">TOOL_003</span>
+    </div>
+    <div class="header-right">BATCH · LOCAL · FREE</div>
+  </header>
+
+  <main>
+
+    <div class="left-panel">
+
+      <div>
+        <div class="section-label">01 / UPLOAD IMAGE</div>
+        <div class="upload-zone" id="upload-zone">
+          <span class="upload-icon">🖼️</span>
+          <span class="upload-hint">CLICK OR DRAG IMAGE HERE</span>
+        </div>
+        <input type="file" id="file-input" accept="image/*">
+        <img id="img-preview" alt="Preview">
+      </div>
+
+      <div>
+        <div class="section-label">02 / ENTER TEXT</div>
+        <textarea class="text-input" id="meme-text" placeholder="Enter meme text…"></textarea>
+      </div>
+
+      <button class="gen-btn" id="gen-btn" disabled>GENERATE MEMES →</button>
+
+    </div>
+
+    <div class="right-area">
+      <div class="meme-grid" id="meme-grid">
+        <div class="empty-state" id="empty-state">
+          <span class="empty-icon">🎭</span>
+          <span class="empty-text">UPLOAD IMAGE + ENTER TEXT TO START</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+</div>
+
+<script>
+</script>
+
+</body>
+</html>
