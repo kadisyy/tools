@@ -13,10 +13,11 @@
   --surface2: #f7f9ff;
   --border: #dde4f5;
   --border2: #c8d4f0;
-  --pink: #ff2d78;
-  --pink-light: rgba(255,45,120,0.06);
-  --pink-mid: rgba(255,45,120,0.12);
   --blue: #0057ff;
+  --blue2: #00aaff;
+  --pink: #ff2d78;
+  --pink-l: rgba(255,45,120,0.06);
+  --pink-m: rgba(255,45,120,0.12);
   --green: #00c97a;
   --red: #ff3d3d;
   --text: #0a0e1a;
@@ -26,20 +27,18 @@
   --sans: 'Syne', sans-serif;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
 
 body::before {
-  content: '';
-  position: fixed; inset: 0;
+  content: ''; position: fixed; inset: 0;
   background-image:
-    linear-gradient(rgba(0,87,255,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,87,255,0.04) 1px, transparent 1px);
+    linear-gradient(rgba(0,87,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,87,255,0.05) 1px, transparent 1px);
   background-size: 44px 44px;
   pointer-events: none; z-index: 0;
 }
 body::after {
-  content: '';
-  position: fixed; inset: 0;
+  content: ''; position: fixed; inset: 0;
   background:
     radial-gradient(ellipse 50% 40% at 90% 10%, rgba(255,45,120,0.07) 0%, transparent 70%),
     radial-gradient(ellipse 40% 35% at 10% 80%, rgba(0,87,255,0.05) 0%, transparent 70%);
@@ -49,7 +48,7 @@ body::after {
 .wrapper {
   position: relative; z-index: 1;
   min-height: 100vh; display: flex; flex-direction: column;
-  max-width: 1280px; margin: 0 auto; padding: 0 44px 64px;
+  max-width: 1280px; margin: 0 auto; padding: 0 44px 72px;
 }
 
 /* ── Nav ── */
@@ -65,35 +64,59 @@ nav {
 }
 .back-btn:hover { color: var(--pink); }
 .back-btn::before { content: '←'; font-size: 14px; }
-.nav-id { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.15em; }
+.nav-id {
+  font-family: var(--mono); font-size: 10px; color: var(--text3);
+  border: 1px solid var(--border2); padding: 4px 12px; letter-spacing: 0.1em;
+  background: var(--surface);
+}
 
 /* ── Header ── */
-header { padding: 32px 0 0; }
+header { padding: 36px 0 0; }
+
 h1 {
-  font-family: var(--sans); font-size: clamp(28px, 4.5vw, 52px);
-  font-weight: 800; letter-spacing: -0.01em; line-height: 1.1; color: var(--text);
+  font-family: var(--sans); font-size: clamp(36px, 5vw, 60px);
+  font-weight: 800; letter-spacing: -0.01em; line-height: 1.05; color: var(--text);
 }
 h1 .accent {
   background: linear-gradient(135deg, var(--pink) 0%, #ff6fa8 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
-.subtitle { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.18em; margin-top: 10px; }
-
+.tagline {
+  font-family: var(--mono); font-size: 11px; color: var(--text3);
+  letter-spacing: 0.18em; margin-top: 10px;
+}
 .divider {
-  height: 2px; margin: 24px 0 32px;
+  height: 2px; margin: 28px 0 36px;
   background: linear-gradient(90deg, var(--pink) 0%, rgba(255,45,120,0.15) 100%);
-  border-radius: 2px;
+  border-radius: 2px; position: relative;
+}
+.divider::after {
+  content: ''; position: absolute; right: 0; top: -4px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--pink); opacity: 0.25;
 }
 
-/* ── Main ── */
-.main {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 24px; flex: 1;
+/* ── Section label ── */
+.section-label {
+  font-family: var(--mono); font-size: 10px; color: var(--text3);
+  letter-spacing: 0.25em; margin-bottom: 20px;
+  display: flex; align-items: center; gap: 14px;
 }
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border2); }
 
-/* ── Panel ── */
+/* ── Main grid ── */
+.main { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+/* ── Panel — same card style as index ── */
 .panel {
   background: var(--surface); border: 1.5px solid var(--border);
-  border-radius: 4px; padding: 24px; display: flex; flex-direction: column; gap: 16px;
+  border-radius: 2px; padding: 28px; display: flex; flex-direction: column; gap: 18px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.22s, box-shadow 0.22s;
+}
+.panel::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--pink), transparent);
 }
 .panel-label {
   font-family: var(--mono); font-size: 10px; color: var(--text3);
@@ -103,30 +126,36 @@ h1 .accent {
 
 /* ── Drop zone ── */
 .drop-zone {
-  border: 2px dashed var(--border2); border-radius: 4px;
-  height: 260px; display: flex; flex-direction: column;
+  border: 2px dashed var(--border2); border-radius: 2px;
+  height: 240px; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 12px;
   cursor: pointer; transition: border-color 0.2s, background 0.2s;
   position: relative; overflow: hidden;
 }
 .drop-zone:hover, .drop-zone.drag-over {
-  border-color: var(--pink); background: var(--pink-light);
+  border-color: var(--pink); background: var(--pink-l);
 }
 .drop-zone input[type=file] {
   position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
 }
+.drop-icon {
+  width: 52px; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface2); border: 1.5px solid var(--border);
+  border-radius: 12px;
+}
 .drop-icon svg {
-  width: 36px; height: 36px; stroke: var(--pink); fill: none;
-  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+  width: 24px; height: 24px; stroke: var(--pink); fill: none;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
 }
 .drop-text { font-family: var(--mono); font-size: 11px; color: var(--text2); letter-spacing: 0.12em; }
 .drop-hint { font-size: 12px; color: var(--text3); }
 
 /* ── Preview ── */
 .preview-wrap {
-  height: 260px; position: relative; overflow: hidden;
+  height: 240px; position: relative; overflow: hidden;
   background: var(--surface2); border: 1.5px solid var(--border);
-  border-radius: 4px; display: none; align-items: center; justify-content: center;
+  border-radius: 2px; display: none; align-items: center; justify-content: center;
 }
 .preview-wrap.show { display: flex; }
 .preview-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
@@ -164,15 +193,15 @@ input[type=range]::-webkit-slider-thumb {
   border-radius: 2px; transition: all 0.18s;
 }
 .mode-btn.active, .mode-btn:hover {
-  color: var(--pink); border-color: var(--pink); background: var(--pink-light);
+  color: var(--pink); border-color: var(--pink); background: var(--pink-l);
 }
 
 /* ── Action btn ── */
 .action-btn {
   width: 100%; font-family: var(--sans); font-size: 14px; font-weight: 700;
-  letter-spacing: 0.08em; color: #fff;
+  letter-spacing: 0.06em; color: #fff;
   background: linear-gradient(135deg, var(--pink) 0%, #ff6fa8 100%);
-  border: none; padding: 14px; cursor: pointer; border-radius: 4px;
+  border: none; padding: 14px; cursor: pointer; border-radius: 2px;
   transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
   box-shadow: 0 4px 16px rgba(255,45,120,0.25);
 }
@@ -180,10 +209,10 @@ input[type=range]::-webkit-slider-thumb {
 .action-btn:active { transform: translateY(0); }
 .action-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 
-/* ── Output ── */
+/* ── Result area ── */
 .result-area {
   flex: 1; background: var(--surface2); border: 1.5px solid var(--border);
-  border-radius: 4px; min-height: 260px;
+  border-radius: 2px; min-height: 240px;
   display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
 }
 .result-placeholder {
@@ -205,7 +234,7 @@ input[type=range]::-webkit-slider-thumb {
 /* log */
 .log-area {
   background: var(--surface2); border: 1.5px solid var(--border);
-  border-radius: 4px; padding: 14px; height: 110px; overflow-y: auto;
+  border-radius: 2px; padding: 14px; height: 108px; overflow-y: auto;
   font-family: var(--mono); font-size: 10px; color: var(--text3);
   letter-spacing: 0.06em; line-height: 1.9;
 }
@@ -223,15 +252,33 @@ input[type=range]::-webkit-slider-thumb {
   font-family: var(--sans); font-size: 13px; font-weight: 700;
   letter-spacing: 0.06em; color: var(--green);
   border: 1.5px solid var(--green); padding: 10px 20px;
-  cursor: pointer; background: transparent; border-radius: 4px;
+  cursor: pointer; background: transparent; border-radius: 2px;
   transition: background 0.2s, box-shadow 0.2s; display: none; align-self: flex-end;
 }
 .dl-btn.show { display: block; }
 .dl-btn:hover { background: rgba(0,201,122,0.08); box-shadow: 0 4px 16px rgba(0,201,122,0.2); }
 
+/* ── Footer ── */
+footer {
+  margin-top: auto; padding-top: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px solid var(--border);
+}
+.footer-txt { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.15em; }
+.footer-dots { display: flex; gap: 6px; }
+.footer-dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--border2); }
+.footer-dots span:nth-child(1) { animation: dp 2s 0s infinite; }
+.footer-dots span:nth-child(2) { animation: dp 2s 0.3s infinite; }
+.footer-dots span:nth-child(3) { animation: dp 2s 0.6s infinite; }
+@keyframes dp { 0%,100%{opacity:0.4;transform:scale(1)} 50%{opacity:1;transform:scale(1.4)} }
+
 /* entrance */
 .wrapper { animation: wIn 0.5s ease both; }
-@keyframes wIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+@keyframes wIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+.panel { animation: cIn 0.5s ease both; }
+.panel:nth-child(1) { animation-delay: 0.08s; }
+.panel:nth-child(2) { animation-delay: 0.16s; }
+@keyframes cIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
 </style>
 </head>
 <body>
@@ -239,17 +286,19 @@ input[type=range]::-webkit-slider-thumb {
 <div class="wrapper">
   <nav>
     <a class="back-btn" href="index.html">TOOLBOX</a>
-    <div class="nav-id">TOOL_002 // WATERMARK REMOVER</div>
+    <div class="nav-id">TOOL_002</div>
   </nav>
 
   <header>
     <h1>Watermark<br><span class="accent">Remover</span></h1>
-    <div class="subtitle">// 本地图片去水印 · LOCAL IMAGE PROCESSING</div>
+    <div class="tagline">// 本地图片去水印 · LOCAL IMAGE PROCESSING</div>
     <div class="divider"></div>
   </header>
 
+  <div class="section-label">WORKSPACE · 工作区</div>
+
   <div class="main">
-    <!-- Input -->
+    <!-- Input panel -->
     <div class="panel">
       <div class="panel-label">INPUT · 输入图片</div>
 
@@ -294,7 +343,7 @@ input[type=range]::-webkit-slider-thumb {
       <button class="action-btn" id="processBtn" disabled>▶ PROCESS IMAGE</button>
     </div>
 
-    <!-- Output -->
+    <!-- Output panel -->
     <div class="panel">
       <div class="panel-label">OUTPUT · 处理结果</div>
 
@@ -314,6 +363,11 @@ input[type=range]::-webkit-slider-thumb {
       <button class="dl-btn" id="dlBtn">↓ 下载结果</button>
     </div>
   </div>
+
+  <footer>
+    <div class="footer-txt">© 2026 TOOLBOX · TOOL_002</div>
+    <div class="footer-dots"><span></span><span></span><span></span></div>
+  </footer>
 </div>
 
 <script>
@@ -323,7 +377,6 @@ const previewWrap = document.getElementById('previewWrap');
 const previewImg = document.getElementById('previewImg');
 const clearBtn = document.getElementById('clearBtn');
 const processBtn = document.getElementById('processBtn');
-const resultArea = document.getElementById('resultArea');
 const resultPlaceholder = document.getElementById('resultPlaceholder');
 const resultImg = document.getElementById('resultImg');
 const progressBar = document.getElementById('progressBar');
@@ -333,9 +386,7 @@ const dlBtn = document.getElementById('dlBtn');
 const sensSlider = document.getElementById('sensitivity');
 const strengthSlider = document.getElementById('strength');
 
-let currentFile = null;
-let currentMode = 'auto';
-let resultDataUrl = null;
+let currentFile = null, currentMode = 'auto', resultDataUrl = null;
 
 sensSlider.addEventListener('input', () => document.getElementById('sensVal').textContent = sensSlider.value);
 strengthSlider.addEventListener('input', () => document.getElementById('strengthVal').textContent = strengthSlider.value);
@@ -349,7 +400,6 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
 });
 
 fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
-
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
 dropZone.addEventListener('drop', e => {
@@ -431,38 +481,34 @@ function applyRemoval(ctx, w, h) {
   const data = imageData.data;
   const factor = parseInt(strengthSlider.value) / 100;
   const sens = parseInt(sensSlider.value) / 100;
-
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
     const brightness = (r + g + b) / 3;
     let isWatermark = false;
-
     if (currentMode === 'auto' || currentMode === 'text') {
       if (brightness > 200 && Math.abs(r-g) < 20 && Math.abs(g-b) < 20 && a < 220) isWatermark = true;
       if (brightness > 160 && brightness < 220 && Math.abs(r-g) < 15 && Math.abs(g-b) < 15 && a < 200) isWatermark = true;
     }
     if (currentMode === 'auto' || currentMode === 'logo' || currentMode === 'stamp') {
-      const saturation = Math.max(r,g,b) - Math.min(r,g,b);
-      if (saturation < 30 && a < 180) isWatermark = true;
+      if ((Math.max(r,g,b) - Math.min(r,g,b)) < 30 && a < 180) isWatermark = true;
     }
-
     if (isWatermark) {
-      const x = (i / 4) % w, y = Math.floor((i / 4) / w);
+      const x = (i/4) % w, y = Math.floor((i/4) / w);
       const neighbors = [];
-      for (const [dx, dy] of [[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,1],[-1,1],[1,-1]]) {
+      for (const [dx,dy] of [[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,1],[-1,1],[1,-1]]) {
         const nx = x+dx, ny = y+dy;
-        if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+        if (nx>=0 && nx<w && ny>=0 && ny<h) {
           const ni = (ny*w+nx)*4;
-          const nb = (data[ni]+data[ni+1]+data[ni+2])/3;
-          if (data[ni+3] > 200 && nb < 200) neighbors.push([data[ni], data[ni+1], data[ni+2]]);
+          if (data[ni+3]>200 && (data[ni]+data[ni+1]+data[ni+2])/3<200)
+            neighbors.push([data[ni],data[ni+1],data[ni+2]]);
         }
       }
       if (neighbors.length > 0) {
-        const avg = neighbors.reduce((a,c) => [a[0]+c[0],a[1]+c[1],a[2]+c[2]], [0,0,0]).map(v => v/neighbors.length);
-        data[i]   = Math.round(r*(1-factor*sens) + avg[0]*factor*sens);
-        data[i+1] = Math.round(g*(1-factor*sens) + avg[1]*factor*sens);
-        data[i+2] = Math.round(b*(1-factor*sens) + avg[2]*factor*sens);
-        data[i+3] = Math.min(255, a + Math.round((255-a)*factor*sens));
+        const avg = neighbors.reduce((a,c)=>[a[0]+c[0],a[1]+c[1],a[2]+c[2]],[0,0,0]).map(v=>v/neighbors.length);
+        data[i]   = Math.round(r*(1-factor*sens)+avg[0]*factor*sens);
+        data[i+1] = Math.round(g*(1-factor*sens)+avg[1]*factor*sens);
+        data[i+2] = Math.round(b*(1-factor*sens)+avg[2]*factor*sens);
+        data[i+3] = Math.min(255, a+Math.round((255-a)*factor*sens));
       }
     }
   }
@@ -480,7 +526,7 @@ dlBtn.addEventListener('click', () => {
 
 function addLog(msg, type) {
   const now = new Date();
-  const ts = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n => String(n).padStart(2,'0')).join(':');
+  const ts = [now.getHours(),now.getMinutes(),now.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
   const line = document.createElement('div');
   line.className = 'log-line' + (type ? ' '+type : '');
   line.innerHTML = `<span class="ts">${ts}</span><span class="msg">${msg}</span>`;
