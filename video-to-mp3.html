@@ -400,6 +400,7 @@ function setProgress(pct, label, log) {
 async function loadFFmpeg() {
   if (ffmpeg && ffmpeg.isLoaded()) return;
   ffmpeg = createFFmpeg({
+    corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
     log: false,
     logger: ({ message }) => {
       progressLog.textContent = message;
@@ -419,7 +420,7 @@ async function loadFFmpeg() {
     await ffmpeg.load();
   } catch (loadErr) {
     ffmpeg = null;
-    throw new Error('FFmpeg 加载失败，请检查网络连接后重试。');
+    throw new Error('FFmpeg 加载失败：' + (loadErr.message || loadErr));
   }
   setProgress(20, 'FFMPEG READY');
 }
