@@ -307,6 +307,9 @@ footer {
 
 <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 <script>
+if (typeof SharedArrayBuffer === 'undefined') { self.SharedArrayBuffer = ArrayBuffer; }
+</script>
+<script>
 const { createFFmpeg, fetchFile } = FFmpeg;
 
 const dropZone = document.getElementById('drop-zone');
