@@ -391,32 +391,54 @@ function setProgress(pct, label, log) {
   if (log !== undefined) progressLog.textContent = log;
 }
 
-// Decode video file to AudioBuffer using Web Audio API
-function decodeAudio(file) {
+// Capture audio from video element via OfflineAudioContext + ScriptProcessor
+function extractAudioBuffer(file) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      ctx.decodeAudioData(e.target.result, buf => { ctx.close(); resolve(buf); }, reject);
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.src = url;
+    video.muted = true;
+    video.preload = 'auto';
+
+    video.addEventListener('loadedmetadata', () => {
+      const duration = video.duration;
+      if (!isFinite(duration) || duration <= 0) {
+        URL.revokeObjectURL(url);
+        return reject(new Error('无法读取视频时长，请确认文件包含音轨且格式受浏览器支持（MP4/MOV/WEBM）'));
+      }
+
+      const sampleRate = 44100;
+      const offlineCtx = new OfflineAudioContext(2, Math.ceil(sampleRate * duration), sampleRate);
+      const source = offlineCtx.createMediaElementSource(video);
+      source.connect(offlineCtx.destination);
+
+      video.play().then(() => {
+        offlineCtx.startRendering().then(buf => {
+          video.pause();
+          URL.revokeObjectURL(url);
+          resolve(buf);
+        }).catch(err => { URL.revokeObjectURL(url); reject(err); });
+      }).catch(err => { URL.revokeObjectURL(url); reject(err); });
+    });
+
+    video.addEventListener('error', () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('浏览器无法解码此视频格式，请使用 MP4/MOV/WEBM'));
+    });
   });
 }
 
 // Encode AudioBuffer to MP3 using lamejs
-function encodeMP3(audioBuffer, kbps, onProgress) {
+function encodeMP3(audioBuffer, kbps) {
   const numChannels = Math.min(audioBuffer.numberOfChannels, 2);
   const sampleRate = audioBuffer.sampleRate;
   const mp3enc = new lamejs.Mp3Encoder(numChannels, sampleRate, kbps);
   const blockSize = 1152;
   const mp3Data = [];
-
   const ch0 = audioBuffer.getChannelData(0);
   const ch1 = numChannels > 1 ? audioBuffer.getChannelData(1) : ch0;
   const total = ch0.length;
 
-  // Convert Float32 to Int16
   function toInt16(floatArr, start, len) {
     const out = new Int16Array(len);
     for (let i = 0; i < len; i++) {
@@ -432,9 +454,7 @@ function encodeMP3(audioBuffer, kbps, onProgress) {
     const right = toInt16(ch1, offset, len);
     const encoded = numChannels > 1 ? mp3enc.encodeBuffer(left, right) : mp3enc.encodeBuffer(left);
     if (encoded.length > 0) mp3Data.push(new Int8Array(encoded));
-    if (offset % (blockSize * 100) === 0) onProgress(Math.round((offset / total) * 100));
   }
-
   const flushed = mp3enc.flush();
   if (flushed.length > 0) mp3Data.push(new Int8Array(flushed));
   return new Blob(mp3Data, { type: 'audio/mpeg' });
@@ -447,20 +467,15 @@ convertBtn.addEventListener('click', async () => {
   hideResult();
   hideError();
   progressWrap.classList.add('visible');
-  setProgress(0, 'DECODING AUDIO...', '');
+  setProgress(5, 'DECODING AUDIO...', 'Loading video...');
 
   try {
-    setProgress(5, 'DECODING AUDIO...', 'Reading file...');
-    const audioBuffer = await decodeAudio(selectedFile);
+    const audioBuffer = await extractAudioBuffer(selectedFile);
 
-    setProgress(30, 'ENCODING MP3...', 'Encoding...');
-    // Run encoding in a microtask to allow UI to update
-    await new Promise(resolve => setTimeout(resolve, 20));
+    setProgress(60, 'ENCODING MP3...', 'Encoding...');
+    await new Promise(r => setTimeout(r, 20));
 
-    const blob = encodeMP3(audioBuffer, selectedKbps, pct => {
-      setProgress(30 + Math.round(pct * 0.68), 'ENCODING MP3...', pct + '%');
-    });
-
+    const blob = encodeMP3(audioBuffer, selectedKbps);
     const outputName = selectedFile.name.replace(/\.[^.]+$/, '') + '.mp3';
     outputUrl = URL.createObjectURL(blob);
 
