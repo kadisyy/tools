@@ -305,12 +305,8 @@ footer {
   </footer>
 </div>
 
-<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
 <script>
-if (typeof SharedArrayBuffer === 'undefined') { self.SharedArrayBuffer = ArrayBuffer; }
-</script>
-<script>
-const { createFFmpeg, fetchFile } = FFmpeg;
 
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
@@ -332,9 +328,7 @@ const downloadBtn = document.getElementById('download-btn');
 
 let selectedFile = null;
 let selectedKbps = 192;
-let ffmpeg = null;
 let outputUrl = null;
-let videoDuration = 0;
 
 // Quality selection
 document.querySelectorAll('.quality-btn').forEach(btn => {
@@ -361,9 +355,6 @@ fileInput.addEventListener('change', () => {
 
 function setFile(f) {
   selectedFile = f;
-  if (f.size > 2 * 1024 * 1024 * 1024) {
-    showError('文件过大（超过 2GB），可能导致浏览器崩溃。建议压缩后再转换。');
-  }
   fileName.textContent = f.name;
   fileSize.textContent = formatBytes(f.size);
   fileInfo.classList.add('visible');
@@ -400,32 +391,53 @@ function setProgress(pct, label, log) {
   if (log !== undefined) progressLog.textContent = log;
 }
 
-async function loadFFmpeg() {
-  if (ffmpeg && ffmpeg.isLoaded()) return;
-  ffmpeg = createFFmpeg({
-    corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
-    log: false,
-    logger: ({ message }) => {
-      progressLog.textContent = message;
-      const m = message.match(/time=(\d+):(\d+):([\d.]+)/);
-      if (m && videoDuration) {
-        const elapsed = parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseFloat(m[3]);
-        const pct = Math.min(99, Math.round((elapsed / videoDuration) * 100));
-        setProgress(pct, 'CONVERTING...', message);
-      }
-    },
-    progress: ({ ratio }) => {
-      if (ratio > 0) setProgress(Math.min(99, Math.round(25 + ratio * 74)), 'CONVERTING...');
-    },
+// Decode video file to AudioBuffer using Web Audio API
+function decodeAudio(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      ctx.decodeAudioData(e.target.result, buf => { ctx.close(); resolve(buf); }, reject);
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
   });
-  setProgress(5, 'LOADING FFMPEG...');
-  try {
-    await ffmpeg.load();
-  } catch (loadErr) {
-    ffmpeg = null;
-    throw new Error('FFmpeg 加载失败：' + (loadErr.message || loadErr));
+}
+
+// Encode AudioBuffer to MP3 using lamejs
+function encodeMP3(audioBuffer, kbps, onProgress) {
+  const numChannels = Math.min(audioBuffer.numberOfChannels, 2);
+  const sampleRate = audioBuffer.sampleRate;
+  const mp3enc = new lamejs.Mp3Encoder(numChannels, sampleRate, kbps);
+  const blockSize = 1152;
+  const mp3Data = [];
+
+  const ch0 = audioBuffer.getChannelData(0);
+  const ch1 = numChannels > 1 ? audioBuffer.getChannelData(1) : ch0;
+  const total = ch0.length;
+
+  // Convert Float32 to Int16
+  function toInt16(floatArr, start, len) {
+    const out = new Int16Array(len);
+    for (let i = 0; i < len; i++) {
+      const s = Math.max(-1, Math.min(1, floatArr[start + i]));
+      out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return out;
   }
-  setProgress(20, 'FFMPEG READY');
+
+  for (let offset = 0; offset < total; offset += blockSize) {
+    const len = Math.min(blockSize, total - offset);
+    const left = toInt16(ch0, offset, len);
+    const right = toInt16(ch1, offset, len);
+    const encoded = numChannels > 1 ? mp3enc.encodeBuffer(left, right) : mp3enc.encodeBuffer(left);
+    if (encoded.length > 0) mp3Data.push(new Int8Array(encoded));
+    if (offset % (blockSize * 100) === 0) onProgress(Math.round((offset / total) * 100));
+  }
+
+  const flushed = mp3enc.flush();
+  if (flushed.length > 0) mp3Data.push(new Int8Array(flushed));
+  return new Blob(mp3Data, { type: 'audio/mpeg' });
 }
 
 convertBtn.addEventListener('click', async () => {
@@ -435,33 +447,21 @@ convertBtn.addEventListener('click', async () => {
   hideResult();
   hideError();
   progressWrap.classList.add('visible');
-  setProgress(0, 'LOADING FFMPEG...', '');
+  setProgress(0, 'DECODING AUDIO...', '');
 
   try {
-    await loadFFmpeg();
+    setProgress(5, 'DECODING AUDIO...', 'Reading file...');
+    const audioBuffer = await decodeAudio(selectedFile);
 
-    videoDuration = await getVideoDuration(selectedFile);
+    setProgress(30, 'ENCODING MP3...', 'Encoding...');
+    // Run encoding in a microtask to allow UI to update
+    await new Promise(resolve => setTimeout(resolve, 20));
 
-    const ext = selectedFile.name.split('.').pop().toLowerCase();
-    const inputName = 'input.' + ext;
+    const blob = encodeMP3(audioBuffer, selectedKbps, pct => {
+      setProgress(30 + Math.round(pct * 0.68), 'ENCODING MP3...', pct + '%');
+    });
+
     const outputName = selectedFile.name.replace(/\.[^.]+$/, '') + '.mp3';
-
-    setProgress(22, 'READING FILE...');
-    ffmpeg.FS('writeFile', inputName, await fetchFile(selectedFile));
-
-    setProgress(25, 'CONVERTING...');
-    await ffmpeg.run(
-      '-i', inputName,
-      '-vn',
-      '-ar', '44100',
-      '-ac', '2',
-      '-b:a', selectedKbps + 'k',
-      'output.mp3'
-    );
-
-    setProgress(99, 'PACKAGING...');
-    const data = ffmpeg.FS('readFile', 'output.mp3');
-    const blob = new Blob([data.buffer], { type: 'audio/mpeg' });
     outputUrl = URL.createObjectURL(blob);
 
     downloadBtn.href = outputUrl;
@@ -469,35 +469,17 @@ convertBtn.addEventListener('click', async () => {
     resultTitle.textContent = outputName;
     resultMeta.textContent = formatBytes(blob.size) + ' · ' + selectedKbps + 'kbps MP3';
 
-    setProgress(100, 'DONE');
+    setProgress(100, 'DONE', '');
     progressWrap.classList.remove('visible');
     resultWrap.classList.add('visible');
 
-    try { ffmpeg.FS('unlink', inputName); } catch(_) {}
-    try { ffmpeg.FS('unlink', 'output.mp3'); } catch(_) {}
-
   } catch (e) {
     progressWrap.classList.remove('visible');
-    if (ffmpeg && ffmpeg.isLoaded()) {
-      try { ffmpeg.FS('unlink', 'input.' + (selectedFile?.name.split('.').pop().toLowerCase() || 'tmp')); } catch(_) {}
-      try { ffmpeg.FS('unlink', 'output.mp3'); } catch(_) {}
-    }
     showError('转换失败：' + (e.message || e));
   } finally {
     convertBtn.disabled = false;
   }
 });
-
-function getVideoDuration(file) {
-  return new Promise(resolve => {
-    const url = URL.createObjectURL(file);
-    const v = document.createElement('video');
-    v.preload = 'metadata';
-    v.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(v.duration || 0); };
-    v.onerror = () => { URL.revokeObjectURL(url); resolve(0); };
-    v.src = url;
-  });
-}
 </script>
 </body>
 </html>
