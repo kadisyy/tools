@@ -391,73 +391,74 @@ function setProgress(pct, label, log) {
   if (log !== undefined) progressLog.textContent = log;
 }
 
-// Capture audio from video element via OfflineAudioContext + ScriptProcessor
-function extractAudioBuffer(file) {
+function toInt16(floatArr) {
+  const out = new Int16Array(floatArr.length);
+  for (let i = 0; i < floatArr.length; i++) {
+    const s = Math.max(-1, Math.min(1, floatArr[i]));
+    out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+  return out;
+}
+
+// Real-time capture: play video silently, capture audio via ScriptProcessor, encode to MP3
+function captureToMp3(file, kbps, onProgress) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const video = document.createElement('video');
     video.src = url;
-    video.muted = true;
     video.preload = 'auto';
+    video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
+    document.body.appendChild(video);
+
+    function cleanup() {
+      try { video.pause(); } catch(_) {}
+      document.body.removeChild(video);
+      URL.revokeObjectURL(url);
+    }
+
+    video.addEventListener('error', () => {
+      cleanup();
+      reject(new Error('浏览器无法解码此格式，请使用 MP4 / MOV / WEBM'));
+    });
 
     video.addEventListener('loadedmetadata', () => {
       const duration = video.duration;
       if (!isFinite(duration) || duration <= 0) {
-        URL.revokeObjectURL(url);
-        return reject(new Error('无法读取视频时长，请确认文件包含音轨且格式受浏览器支持（MP4/MOV/WEBM）'));
+        cleanup();
+        return reject(new Error('无法读取视频时长，文件可能损坏或不含音轨'));
       }
 
-      const sampleRate = 44100;
-      const offlineCtx = new OfflineAudioContext(2, Math.ceil(sampleRate * duration), sampleRate);
-      const source = offlineCtx.createMediaElementSource(video);
-      source.connect(offlineCtx.destination);
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const source = ctx.createMediaElementSource(video);
+      const processor = ctx.createScriptProcessor(4096, 2, 2);
+      const silencer = ctx.createGain();
+      silencer.gain.value = 0;
+      source.connect(processor);
+      processor.connect(silencer);
+      silencer.connect(ctx.destination);
 
-      video.play().then(() => {
-        offlineCtx.startRendering().then(buf => {
-          video.pause();
-          URL.revokeObjectURL(url);
-          resolve(buf);
-        }).catch(err => { URL.revokeObjectURL(url); reject(err); });
-      }).catch(err => { URL.revokeObjectURL(url); reject(err); });
-    });
+      const mp3enc = new lamejs.Mp3Encoder(2, ctx.sampleRate, kbps);
+      const mp3Data = [];
 
-    video.addEventListener('error', () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('浏览器无法解码此视频格式，请使用 MP4/MOV/WEBM'));
+      processor.onaudioprocess = e => {
+        const l16 = toInt16(e.inputBuffer.getChannelData(0));
+        const r16 = toInt16(e.inputBuffer.getChannelData(1));
+        const buf = mp3enc.encodeBuffer(l16, r16);
+        if (buf.length > 0) mp3Data.push(new Int8Array(buf));
+        onProgress(Math.min(99, Math.round((video.currentTime / duration) * 100)));
+      };
+
+      video.addEventListener('ended', () => {
+        const tail = mp3enc.flush();
+        if (tail.length > 0) mp3Data.push(new Int8Array(tail));
+        processor.disconnect(); source.disconnect(); ctx.close();
+        cleanup();
+        resolve(new Blob(mp3Data, { type: 'audio/mpeg' }));
+      });
+
+      video.play().catch(err => { cleanup(); reject(err); });
     });
   });
-}
-
-// Encode AudioBuffer to MP3 using lamejs
-function encodeMP3(audioBuffer, kbps) {
-  const numChannels = Math.min(audioBuffer.numberOfChannels, 2);
-  const sampleRate = audioBuffer.sampleRate;
-  const mp3enc = new lamejs.Mp3Encoder(numChannels, sampleRate, kbps);
-  const blockSize = 1152;
-  const mp3Data = [];
-  const ch0 = audioBuffer.getChannelData(0);
-  const ch1 = numChannels > 1 ? audioBuffer.getChannelData(1) : ch0;
-  const total = ch0.length;
-
-  function toInt16(floatArr, start, len) {
-    const out = new Int16Array(len);
-    for (let i = 0; i < len; i++) {
-      const s = Math.max(-1, Math.min(1, floatArr[start + i]));
-      out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-    }
-    return out;
-  }
-
-  for (let offset = 0; offset < total; offset += blockSize) {
-    const len = Math.min(blockSize, total - offset);
-    const left = toInt16(ch0, offset, len);
-    const right = toInt16(ch1, offset, len);
-    const encoded = numChannels > 1 ? mp3enc.encodeBuffer(left, right) : mp3enc.encodeBuffer(left);
-    if (encoded.length > 0) mp3Data.push(new Int8Array(encoded));
-  }
-  const flushed = mp3enc.flush();
-  if (flushed.length > 0) mp3Data.push(new Int8Array(flushed));
-  return new Blob(mp3Data, { type: 'audio/mpeg' });
 }
 
 convertBtn.addEventListener('click', async () => {
@@ -467,15 +468,13 @@ convertBtn.addEventListener('click', async () => {
   hideResult();
   hideError();
   progressWrap.classList.add('visible');
-  setProgress(5, 'DECODING AUDIO...', 'Loading video...');
+  setProgress(0, 'CONVERTING...', 'Playing video to capture audio...');
 
   try {
-    const audioBuffer = await extractAudioBuffer(selectedFile);
+    const blob = await captureToMp3(selectedFile, selectedKbps, pct => {
+      setProgress(pct, 'CONVERTING...', pct + '%');
+    });
 
-    setProgress(60, 'ENCODING MP3...', 'Encoding...');
-    await new Promise(r => setTimeout(r, 20));
-
-    const blob = encodeMP3(audioBuffer, selectedKbps);
     const outputName = selectedFile.name.replace(/\.[^.]+$/, '') + '.mp3';
     outputUrl = URL.createObjectURL(blob);
 
