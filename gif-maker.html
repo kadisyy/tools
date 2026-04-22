@@ -304,7 +304,7 @@ function startPreview() {
 
   function loop(ts) {
     if (ts - lastTime >= delay) {
-      renderFrame(previewCanvas, sourceImage, effect, previewFrame, frames, textInput.value.trim());
+      renderFrame(previewCanvas, sourceImage, effect, previewFrame, frames);
       previewFrame = (previewFrame + 1) % frames;
       lastTime = ts;
     }
@@ -314,7 +314,7 @@ function startPreview() {
 }
 
 // ── Frame renderer ──
-function renderFrame(canvas, img, effect, frame, totalFrames, overlayText) {
+function renderFrame(canvas, img, effect, frame, totalFrames) {
   const ctx = canvas.getContext('2d');
   const t = frame / totalFrames;
 
@@ -390,24 +390,6 @@ function renderFrame(canvas, img, effect, frame, totalFrames, overlayText) {
   }
 
   ctx.restore();
-
-  // ── Overlay text on image ──
-  if (overlayText) {
-    const fontSize = Math.round(SIZE * 0.085);
-    ctx.font = `bold ${fontSize}px Impact, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    // semi-transparent bar
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(0, SIZE - fontSize * 1.6, SIZE, fontSize * 1.6);
-    // stroke + fill
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 4;
-    ctx.lineJoin = 'round';
-    ctx.strokeText(overlayText, SIZE / 2, SIZE - fontSize * 0.3);
-    ctx.fillStyle = '#fff';
-    ctx.fillText(overlayText, SIZE / 2, SIZE - fontSize * 0.3);
-  }
 }
 
 // ── Generate GIF ──
@@ -420,31 +402,33 @@ genBtn.addEventListener('click', () => {
   genBtn.textContent = 'GENERATING...';
   dlBtn.style.display = 'none';
 
-  const offCanvas = document.createElement('canvas');
-  offCanvas.width = SIZE;
-  offCanvas.height = SIZE;
+  setTimeout(() => {
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = SIZE;
+    offCanvas.height = SIZE;
 
-  const gif = new GIF({ workers: 0, quality: 10, width: SIZE, height: SIZE });
+    const gif = new GIF({ workers: 0, quality: 10, width: SIZE, height: SIZE });
 
-  for (let i = 0; i < frames; i++) {
-    renderFrame(offCanvas, sourceImage, effect, i, frames, textInput.value.trim());
-    gif.addFrame(offCanvas, { copy: true, delay });
-  }
+    for (let i = 0; i < frames; i++) {
+      renderFrame(offCanvas, sourceImage, effect, i, frames);
+      gif.addFrame(offCanvas, { copy: true, delay });
+    }
 
-  gif.on('finished', blob => {
-    genBtn.disabled = false;
-    genBtn.textContent = 'GENERATE GIF →';
-    const url = URL.createObjectURL(blob);
-    dlBtn.style.display = 'inline-block';
-    dlBtn.onclick = () => {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `gif-${effect}-${selectedSpeed}.gif`;
-      a.click();
-    };
-  });
+    gif.on('finished', blob => {
+      genBtn.disabled = false;
+      genBtn.textContent = 'GENERATE GIF →';
+      const url = URL.createObjectURL(blob);
+      dlBtn.style.display = 'inline-block';
+      dlBtn.onclick = () => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `gif-${effect}-${selectedSpeed}.gif`;
+        a.click();
+      };
+    });
 
-  gif.render();
+    gif.render();
+  }, 50);
 });
 </script>
 </body>
