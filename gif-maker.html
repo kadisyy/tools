@@ -403,7 +403,7 @@ genBtn.addEventListener('click', () => {
     offCanvas.width = SIZE;
     offCanvas.height = SIZE;
 
-    const gif = new GIF({ workers: 0, quality: 10, width: SIZE, height: SIZE });
+    const gif = new GIF({ workers: 2, quality: 10, width: SIZE, height: SIZE, workerScript: 'gif.worker.js' });
 
     for (let i = 0; i < frames; i++) {
       renderFrame(offCanvas, sourceImage, effect, i, frames);
