@@ -359,7 +359,53 @@ function renderFrame(canvas, img, effect, frame, totalFrames) {
 }
 
 function generateGif() {
-  // implemented in Task 3
+  if (!sourceImage) return;
+  const { delay, frames } = SPEED_CONFIG[selectedSpeed];
+
+  genBtn.disabled = true;
+  progressWrap.style.display = 'flex';
+  progressFill.style.width = '0%';
+  progressLabel.textContent = 'GENERATING... 0%';
+  dlBtn.style.display = 'none';
+
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = SIZE;
+  offCanvas.height = SIZE;
+
+  const gif = new GIF({
+    workers: 2,
+    quality: 10,
+    width: SIZE,
+    height: SIZE,
+    workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js',
+  });
+
+  for (let i = 0; i < frames; i++) {
+    renderFrame(offCanvas, sourceImage, selectedEffect, i, frames);
+    gif.addFrame(offCanvas, { copy: true, delay });
+  }
+
+  gif.on('progress', p => {
+    const pct = Math.round(p * 100);
+    progressFill.style.width = pct + '%';
+    progressLabel.textContent = `GENERATING... ${pct}%`;
+  });
+
+  gif.on('finished', blob => {
+    progressWrap.style.display = 'none';
+    genBtn.disabled = false;
+
+    const url = URL.createObjectURL(blob);
+    dlBtn.style.display = 'inline-block';
+    dlBtn.onclick = () => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `gif-maker-${selectedEffect}-${selectedSpeed}.gif`;
+      a.click();
+    };
+  });
+
+  gif.render();
 }
 
 genBtn.addEventListener('click', generateGif);
