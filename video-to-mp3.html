@@ -305,9 +305,9 @@ footer {
   </footer>
 </div>
 
-<script type="module">
-import { FFmpeg } from 'https://esm.sh/@ffmpeg/ffmpeg@0.12.10';
-import { fetchFile, toBlobURL } from 'https://esm.sh/@ffmpeg/util@0.12.1';
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+<script>
+const { createFFmpeg, fetchFile } = FFmpeg;
 
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
@@ -398,26 +398,25 @@ function setProgress(pct, label, log) {
 }
 
 async function loadFFmpeg() {
-  if (ffmpeg) return;
-  ffmpeg = new FFmpeg();
-
-  const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-  ffmpeg.on('log', ({ message }) => {
-    progressLog.textContent = message;
-    const m = message.match(/time=(\d+):(\d+):([\d.]+)/);
-    if (m && videoDuration) {
-      const elapsed = parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseFloat(m[3]);
-      const pct = Math.min(99, Math.round((elapsed / videoDuration) * 100));
-      setProgress(pct, 'CONVERTING...', message);
-    }
+  if (ffmpeg && ffmpeg.isLoaded()) return;
+  ffmpeg = createFFmpeg({
+    log: false,
+    logger: ({ message }) => {
+      progressLog.textContent = message;
+      const m = message.match(/time=(\d+):(\d+):([\d.]+)/);
+      if (m && videoDuration) {
+        const elapsed = parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseFloat(m[3]);
+        const pct = Math.min(99, Math.round((elapsed / videoDuration) * 100));
+        setProgress(pct, 'CONVERTING...', message);
+      }
+    },
+    progress: ({ ratio }) => {
+      if (ratio > 0) setProgress(Math.min(99, Math.round(25 + ratio * 74)), 'CONVERTING...');
+    },
   });
-
   setProgress(5, 'LOADING FFMPEG...');
   try {
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    });
+    await ffmpeg.load();
   } catch (loadErr) {
     ffmpeg = null;
     throw new Error('FFmpeg 加载失败，请检查网络连接后重试。');
@@ -444,20 +443,20 @@ convertBtn.addEventListener('click', async () => {
     const outputName = selectedFile.name.replace(/\.[^.]+$/, '') + '.mp3';
 
     setProgress(22, 'READING FILE...');
-    await ffmpeg.writeFile(inputName, await fetchFile(selectedFile));
+    ffmpeg.FS('writeFile', inputName, await fetchFile(selectedFile));
 
     setProgress(25, 'CONVERTING...');
-    await ffmpeg.exec([
+    await ffmpeg.run(
       '-i', inputName,
       '-vn',
       '-ar', '44100',
       '-ac', '2',
       '-b:a', selectedKbps + 'k',
       'output.mp3'
-    ]);
+    );
 
     setProgress(99, 'PACKAGING...');
-    const data = await ffmpeg.readFile('output.mp3');
+    const data = ffmpeg.FS('readFile', 'output.mp3');
     const blob = new Blob([data.buffer], { type: 'audio/mpeg' });
     outputUrl = URL.createObjectURL(blob);
 
@@ -470,14 +469,14 @@ convertBtn.addEventListener('click', async () => {
     progressWrap.classList.remove('visible');
     resultWrap.classList.add('visible');
 
-    await ffmpeg.deleteFile(inputName).catch(() => {});
-    await ffmpeg.deleteFile('output.mp3').catch(() => {});
+    try { ffmpeg.FS('unlink', inputName); } catch(_) {}
+    try { ffmpeg.FS('unlink', 'output.mp3'); } catch(_) {}
 
   } catch (e) {
     progressWrap.classList.remove('visible');
-    if (ffmpeg) {
-      await ffmpeg.deleteFile('input.' + (selectedFile?.name.split('.').pop().toLowerCase() || 'tmp')).catch(() => {});
-      await ffmpeg.deleteFile('output.mp3').catch(() => {});
+    if (ffmpeg && ffmpeg.isLoaded()) {
+      try { ffmpeg.FS('unlink', 'input.' + (selectedFile?.name.split('.').pop().toLowerCase() || 'tmp')); } catch(_) {}
+      try { ffmpeg.FS('unlink', 'output.mp3'); } catch(_) {}
     }
     showError('转换失败：' + (e.message || e));
   } finally {
