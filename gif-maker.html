@@ -208,7 +208,161 @@ body::before {
 </div>
 <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
 <script>
-// JS added in Tasks 2-4
+// ── DOM refs ──
+const fileInput     = document.getElementById('fileInput');
+const uploadZone    = document.getElementById('uploadZone');
+const imgPreview    = document.getElementById('imgPreview');
+const genBtn        = document.getElementById('genBtn');
+const emptyState    = document.getElementById('emptyState');
+const previewWrap   = document.getElementById('previewWrap');
+const previewCanvas = document.getElementById('previewCanvas');
+const progressWrap  = document.getElementById('progressWrap');
+const progressLabel = document.getElementById('progressLabel');
+const progressFill  = document.getElementById('progressFill');
+const dlBtn         = document.getElementById('dlBtn');
+
+// ── State ──
+let sourceImage    = null;
+let selectedEffect = 'shake';
+let selectedSpeed  = 'medium';
+let previewRafId   = null;
+let previewFrame   = 0;
+
+// ── Speed config ──
+const SPEED_CONFIG = {
+  slow:   { delay: 80,  frames: 20 },
+  medium: { delay: 50,  frames: 16 },
+  fast:   { delay: 30,  frames: 12 },
+};
+
+const SIZE = 480;
+
+// ── Upload ──
+function loadImage(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      sourceImage = img;
+      imgPreview.src = e.target.result;
+      imgPreview.style.display = 'block';
+      uploadZone.querySelector('.upload-icon').style.display = 'none';
+      uploadZone.querySelector('.upload-hint').style.display = 'none';
+      emptyState.style.display = 'none';
+      previewWrap.style.display = 'block';
+      genBtn.disabled = false;
+      dlBtn.style.display = 'none';
+      startPreview();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+fileInput.addEventListener('change', e => loadImage(e.target.files[0]));
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  loadImage(e.dataTransfer.files[0]);
+});
+
+// ── Effect selection ──
+document.querySelectorAll('.effect-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.effect-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedEffect = btn.dataset.effect;
+    if (sourceImage) startPreview();
+  });
+});
+
+// ── Speed selection ──
+document.querySelectorAll('.speed-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedSpeed = btn.dataset.speed;
+    if (sourceImage) startPreview();
+  });
+});
+
+// ── Canvas preview (RAF loop) ──
+function startPreview() {
+  if (previewRafId) cancelAnimationFrame(previewRafId);
+  previewCanvas.width = SIZE;
+  previewCanvas.height = SIZE;
+  previewFrame = 0;
+  const { frames, delay } = SPEED_CONFIG[selectedSpeed];
+  let lastTime = 0;
+
+  function loop(ts) {
+    if (ts - lastTime >= delay) {
+      renderFrame(previewCanvas, sourceImage, selectedEffect, previewFrame, frames);
+      previewFrame = (previewFrame + 1) % frames;
+      lastTime = ts;
+    }
+    previewRafId = requestAnimationFrame(loop);
+  }
+  previewRafId = requestAnimationFrame(loop);
+}
+
+// ── Frame renderer ──
+function renderFrame(canvas, img, effect, frame, totalFrames) {
+  const ctx = canvas.getContext('2d');
+  const t = frame / totalFrames;
+
+  ctx.clearRect(0, 0, SIZE, SIZE);
+  ctx.save();
+
+  function drawImg(dx, dy, dw, dh) {
+    const scale = Math.max(dw / img.width, dh / img.height);
+    const sw = img.width * scale, sh = img.height * scale;
+    const sx = dx + (dw - sw) / 2, sy = dy + (dh - sh) / 2;
+    ctx.drawImage(img, sx, sy, sw, sh);
+  }
+
+  if (effect === 'shake') {
+    const amp = 8;
+    const dx = Math.round(Math.sin(t * Math.PI * 4) * amp);
+    const dy = Math.round(Math.cos(t * Math.PI * 3) * amp * 0.6);
+    ctx.translate(dx, dy);
+    drawImg(0, 0, SIZE, SIZE);
+
+  } else if (effect === 'blink') {
+    const visible = frame % 4 < 2;
+    if (visible) {
+      drawImg(0, 0, SIZE, SIZE);
+    } else {
+      drawImg(0, 0, SIZE, SIZE);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillRect(0, 0, SIZE, SIZE);
+    }
+
+  } else if (effect === 'fade') {
+    const alpha = t < 0.5 ? t * 2 : (1 - t) * 2;
+    ctx.globalAlpha = Math.max(0.05, alpha);
+    drawImg(0, 0, SIZE, SIZE);
+
+  } else if (effect === 'zoom') {
+    const scale = 1 + Math.sin(t * Math.PI) * 0.12;
+    ctx.translate(SIZE / 2, SIZE / 2);
+    ctx.scale(scale, scale);
+    ctx.translate(-SIZE / 2, -SIZE / 2);
+    drawImg(0, 0, SIZE, SIZE);
+  }
+
+  ctx.restore();
+}
+
+function generateGif() {
+  // implemented in Task 3
+}
+
+genBtn.addEventListener('click', generateGif);
 </script>
 </body>
 </html>
