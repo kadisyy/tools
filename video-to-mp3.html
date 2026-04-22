@@ -331,6 +331,7 @@ let selectedFile = null;
 let selectedKbps = 192;
 let ffmpeg = null;
 let outputUrl = null;
+let videoDuration = 0;
 
 // Quality selection
 document.querySelectorAll('.quality-btn').forEach(btn => {
@@ -357,6 +358,9 @@ fileInput.addEventListener('change', () => {
 
 function setFile(f) {
   selectedFile = f;
+  if (f.size > 2 * 1024 * 1024 * 1024) {
+    showError('文件过大（超过 2GB），可能导致浏览器崩溃。建议压缩后再转换。');
+  }
   fileName.textContent = f.name;
   fileSize.textContent = formatBytes(f.size);
   fileInfo.classList.add('visible');
@@ -401,18 +405,23 @@ async function loadFFmpeg() {
   ffmpeg.on('log', ({ message }) => {
     progressLog.textContent = message;
     const m = message.match(/time=(\d+):(\d+):([\d.]+)/);
-    if (m && window._duration) {
+    if (m && videoDuration) {
       const elapsed = parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseFloat(m[3]);
-      const pct = Math.min(99, Math.round((elapsed / window._duration) * 100));
+      const pct = Math.min(99, Math.round((elapsed / videoDuration) * 100));
       setProgress(pct, 'CONVERTING...', message);
     }
   });
 
   setProgress(5, 'LOADING FFMPEG...');
-  await ffmpeg.load({
-    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-  });
+  try {
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
+  } catch (loadErr) {
+    ffmpeg = null;
+    throw new Error('FFmpeg 加载失败，请检查网络连接后重试。');
+  }
   setProgress(20, 'FFMPEG READY');
 }
 
@@ -428,7 +437,7 @@ convertBtn.addEventListener('click', async () => {
   try {
     await loadFFmpeg();
 
-    window._duration = await getVideoDuration(selectedFile);
+    videoDuration = await getVideoDuration(selectedFile);
 
     const ext = selectedFile.name.split('.').pop().toLowerCase();
     const inputName = 'input.' + ext;
@@ -466,6 +475,10 @@ convertBtn.addEventListener('click', async () => {
 
   } catch (e) {
     progressWrap.classList.remove('visible');
+    if (ffmpeg) {
+      await ffmpeg.deleteFile('input.' + (selectedFile?.name.split('.').pop().toLowerCase() || 'tmp')).catch(() => {});
+      await ffmpeg.deleteFile('output.mp3').catch(() => {});
+    }
     showError('转换失败：' + (e.message || e));
   } finally {
     convertBtn.disabled = false;
