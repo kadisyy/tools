@@ -401,7 +401,7 @@ async function loadFFmpeg() {
   if (ffmpeg) return;
   ffmpeg = new FFmpeg();
 
-  const baseURL = 'https://esm.sh/@ffmpeg/core@0.12.6/dist/esm';
+  const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
   ffmpeg.on('log', ({ message }) => {
     progressLog.textContent = message;
     const m = message.match(/time=(\d+):(\d+):([\d.]+)/);
