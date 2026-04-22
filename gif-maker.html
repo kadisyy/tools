@@ -166,9 +166,9 @@ body::before {
       </div>
 
       <div>
-        <div class="section-label">02 / DESCRIBE EFFECT</div>
-        <textarea class="text-input-area" id="textInput" placeholder="描述动效，例如：抖动、渐入、闪烁、缩放、弹跳、波浪、故障..."></textarea>
-        <div class="hint-text">支持关键词：抖动/shake · 渐入/fade · 闪烁/blink · 缩放/zoom · 弹跳/bounce · 波浪/wave · 故障/glitch</div>
+        <div class="section-label">02 / DESCRIBE THE SCENE</div>
+        <textarea class="text-input-area" id="textInput" placeholder="描述图片的状态，例如：狂吠、开心跳跃、慵懒睡觉、愤怒咆哮、游泳飘动..."></textarea>
+        <div class="hint-text">狂吠/愤怒 → 抖动 · 跳跃/开心 → 弹跳 · 心跳/惊讶 → 缩放 · 游泳/飘动 → 波浪 · 睡觉/困 → 闪烁 · 消失/平静 → 渐变 · 赛博/故障 → 故障</div>
       </div>
 
       <div>
@@ -190,6 +190,7 @@ body::before {
       </div>
       <div class="preview-wrap" id="previewWrap">
         <canvas class="preview-canvas" id="previewCanvas"></canvas>
+        <div id="effectTag" style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.1em;margin-top:8px;text-align:center;"></div>
       </div>
       <button class="dl-btn" id="dlBtn">↓ DOWNLOAD GIF</button>
     </div>
@@ -206,6 +207,7 @@ const previewWrap   = document.getElementById('previewWrap');
 const previewCanvas = document.getElementById('previewCanvas');
 const dlBtn         = document.getElementById('dlBtn');
 const textInput     = document.getElementById('textInput');
+const effectTag     = document.getElementById('effectTag');
 
 let sourceImage  = null;
 let previewRafId = null;
@@ -222,13 +224,13 @@ const SIZE = 480;
 
 // ── Keyword → effect mapping ──
 const EFFECT_KEYWORDS = {
-  shake:  ['抖动', '震动', '颤抖', 'shake', 'shaking', 'vibrate'],
-  fade:   ['渐入', '渐出', '淡入', '淡出', 'fade', 'fading'],
-  blink:  ['闪烁', '闪光', '闪', 'blink', 'flash', 'flicker'],
-  zoom:   ['缩放', '放大', '脉冲', 'zoom', 'pulse', 'scale'],
-  bounce: ['弹跳', '跳动', '弹', 'bounce', 'jump', 'hop'],
-  wave:   ['波浪', '波动', '波', 'wave', 'ripple', 'swing'],
-  glitch: ['故障', '毛刺', '错位', 'glitch', 'distort', 'corrupt'],
+  shake:  ['抖动', '震动', '颤抖', '狂吠', '吠叫', '咆哮', '愤怒', '发抖', '害怕', '紧张', '激动', '兴奋', '狂叫', '嚎叫', '颤', '哆嗦', 'shake', 'shaking', 'vibrate', 'bark', 'rage', 'angry', 'excited', 'tremble', 'nervous'],
+  bounce: ['弹跳', '跳动', '跳跃', '蹦跳', '蹦蹦跳跳', '开心', '高兴', '欢快', '活泼', '奔跑', '跑', '跳', '蹦', '玩耍', '嬉戏', 'bounce', 'jump', 'hop', 'happy', 'run', 'play', 'energetic', 'lively'],
+  zoom:   ['缩放', '放大', '脉冲', '心跳', '呼吸', '膨胀', '鼓胀', '喘气', '喘息', '惊讶', '震惊', '瞪眼', 'zoom', 'pulse', 'scale', 'breathe', 'heartbeat', 'surprised', 'shocked'],
+  blink:  ['闪烁', '闪光', '闪', '眨眼', '睡觉', '困', '打盹', '昏昏欲睡', '迷离', '发光', '亮', 'blink', 'flash', 'flicker', 'wink', 'sleepy', 'tired', 'glow'],
+  fade:   ['渐入', '渐出', '淡入', '淡出', '消失', '出现', '若隐若现', '朦胧', '梦幻', '安静', '平静', '沉睡', 'fade', 'fading', 'appear', 'disappear', 'dreamy', 'calm', 'peaceful'],
+  wave:   ['波浪', '波动', '摇摆', '摇晃', '飘动', '飘', '游泳', '游', '漂浮', '悠闲', '慵懒', '懒洋洋', '晃', 'wave', 'ripple', 'swing', 'sway', 'float', 'swim', 'lazy', 'gentle'],
+  glitch: ['故障', '毛刺', '错位', '赛博', '科技', '黑客', '数字', '像素', '失真', '混乱', '崩溃', 'glitch', 'distort', 'corrupt', 'cyber', 'hack', 'digital', 'pixel', 'chaos'],
 };
 
 function detectEffect(text) {
@@ -288,12 +290,15 @@ textInput.addEventListener('input', () => {
 });
 
 // ── Canvas preview (RAF) ──
+const EFFECT_LABELS = { shake:'SHAKE 抖动', fade:'FADE 渐变', blink:'BLINK 闪烁', zoom:'ZOOM 缩放', bounce:'BOUNCE 弹跳', wave:'WAVE 波浪', glitch:'GLITCH 故障' };
+
 function startPreview() {
   if (previewRafId) cancelAnimationFrame(previewRafId);
   previewCanvas.width = SIZE;
   previewCanvas.height = SIZE;
   previewFrame = 0;
   const effect = detectEffect(textInput.value);
+  effectTag.textContent = `EFFECT → ${EFFECT_LABELS[effect]}`;
   const { frames, delay } = SPEED_CONFIG[selectedSpeed];
   let lastTime = 0;
 
