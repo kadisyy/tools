@@ -179,54 +179,64 @@ function setStatus(msg, pct) {
 
 async function handleFile(file) {
   clipsEl.innerHTML = '';
-  setStatus('正在解码音频...', 5);
-  const peaks = await analyzeAudio(file);
-  setStatus('音频分析完成，正在分析视频帧...', 40);
-  const shotChanges = await analyzeFrames(file);
-  setStatus('合并分析结果...', 75);
-  const clips = mergeScores(peaks, shotChanges);
-  setStatus(`检测到 ${clips.length} 个燃点片段，开始生成...`, 80);
-  await generateClips(file, clips);
-  setStatus('全部完成', 100);
+  try {
+    setStatus('正在解码音频...', 5);
+    const peaks = await analyzeAudio(file);
+    setStatus('音频分析完成，正在分析视频帧...', 40);
+    const shotChanges = await analyzeFrames(file);
+    setStatus('合并分析结果...', 75);
+    const clips = mergeScores(peaks, shotChanges);
+    setStatus(`检测到 ${clips.length} 个燃点片段，开始生成...`, 80);
+    await generateClips(file, clips);
+    setStatus('全部完成', 100);
+  } catch (err) {
+    setStatus('错误: ' + err.message);
+    progressBar.style.display = 'none';
+  }
 }
 
 async function analyzeAudio(file) {
   const arrayBuffer = await file.arrayBuffer();
   const audioCtx = new AudioContext();
-  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-  const data = audioBuffer.getChannelData(0);
-  const sampleRate = audioBuffer.sampleRate;
-  const windowSize = Math.floor(sampleRate * 1.0);
-  const stepSize = Math.floor(sampleRate * 0.1);
-  const energies = [];
+  try {
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    const data = audioBuffer.getChannelData(0);
+    const sampleRate = audioBuffer.sampleRate;
+    const windowSize = Math.floor(sampleRate * 1.0);
+    const stepSize = Math.floor(sampleRate * 0.1);
+    const energies = [];
 
-  for (let i = 0; i + windowSize < data.length; i += stepSize) {
-    let sum = 0;
-    for (let j = i; j < i + windowSize; j++) sum += data[j] * data[j];
-    energies.push({ t: i / sampleRate, rms: Math.sqrt(sum / windowSize) });
-  }
-
-  const smoothed = energies.map((e, i) => {
-    const w = 5;
-    const slice = energies.slice(Math.max(0, i-w), i+w+1);
-    return { t: e.t, rms: slice.reduce((s,x) => s+x.rms, 0) / slice.length };
-  });
-
-  const vals = smoothed.map(e => e.rms);
-  const mean = vals.reduce((a,b) => a+b, 0) / vals.length;
-  const std = Math.sqrt(vals.map(v => (v-mean)**2).reduce((a,b) => a+b, 0) / vals.length);
-  const threshold = mean + 1.5 * std;
-
-  const peaks = [];
-  for (let i = 1; i < smoothed.length - 1; i++) {
-    if (smoothed[i].rms > threshold &&
-        smoothed[i].rms >= smoothed[i-1].rms &&
-        smoothed[i].rms >= smoothed[i+1].rms) {
-      peaks.push({ t: smoothed[i].t, score: smoothed[i].rms / (mean + std) });
+    for (let i = 0; i + windowSize < data.length; i += stepSize) {
+      let sum = 0;
+      for (let j = i; j < i + windowSize; j++) sum += data[j] * data[j];
+      energies.push({ t: i / sampleRate, rms: Math.sqrt(sum / windowSize) });
     }
+
+    if (energies.length === 0) return [];
+
+    const smoothed = energies.map((e, i) => {
+      const w = 5;
+      const slice = energies.slice(Math.max(0, i-w), i+w+1);
+      return { t: e.t, rms: slice.reduce((s,x) => s+x.rms, 0) / slice.length };
+    });
+
+    const vals = smoothed.map(e => e.rms);
+    const mean = vals.reduce((a,b) => a+b, 0) / vals.length;
+    const std = Math.sqrt(vals.map(v => (v-mean)**2).reduce((a,b) => a+b, 0) / vals.length);
+    const threshold = mean + 1.5 * std;
+
+    const peaks = [];
+    for (let i = 1; i < smoothed.length - 1; i++) {
+      if (smoothed[i].rms > threshold &&
+          smoothed[i].rms >= smoothed[i-1].rms &&
+          smoothed[i].rms >= smoothed[i+1].rms) {
+        peaks.push({ t: smoothed[i].t, score: smoothed[i].rms / (mean + std) });
+      }
+    }
+    return peaks;
+  } finally {
+    await audioCtx.close();
   }
-  await audioCtx.close();
-  return peaks;
 }
 
 async function analyzeFrames(file) {
@@ -245,6 +255,8 @@ async function analyzeFrames(file) {
       canvas.width = 160; canvas.height = 90;
       seekNext(0);
     });
+
+    video.addEventListener('error', () => { URL.revokeObjectURL(url); resolve([]); });
 
     function seekNext(t) {
       if (t > duration) {
@@ -284,7 +296,7 @@ function mergeScores(audioPeaks, frameDiffs) {
     buckets[t] = (buckets[t] || 0) + p.score * 0.6;
   }
 
-  const maxDiff = Math.max(...frameDiffs.map(f => f.diff), 0.001);
+  const maxDiff = frameDiffs.reduce((m, f) => Math.max(m, f.diff), 0.001);
   for (const f of frameDiffs) {
     const t = Math.floor(f.t);
     buckets[t] = (buckets[t] || 0) + (f.diff / maxDiff) * 0.4;
@@ -313,6 +325,11 @@ function mergeScores(audioPeaks, frameDiffs) {
   }
 
   return merged.sort((a, b) => b.score - a.score).slice(0, 8);
+}
+
+async function generateClips(file, clips) {
+  // implemented in Task 5
+  console.log('clips to generate:', clips);
 }
 </script>
 </body>
