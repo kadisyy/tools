@@ -331,14 +331,14 @@ let ffmpegInstance = null;
 
 async function getFFmpeg() {
   if (ffmpegInstance) return ffmpegInstance;
-  const { FFmpeg } = await import('https://esm.sh/@ffmpeg/ffmpeg@0.12.10');
+  const { FFmpeg } = await import('https://esm.sh/@ffmpeg/ffmpeg@0.12.6');
   const { fetchFile, toBlobURL } = await import('https://esm.sh/@ffmpeg/util@0.12.1');
   const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
   const ff = new FFmpeg();
   await ff.load({
     coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
     wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    workerURL: await toBlobURL('https://esm.sh/@ffmpeg/ffmpeg@0.12.10/es2022/worker.js', 'text/javascript'),
+    workerURL: await toBlobURL(`${baseURL}/ffmpeg-core-worker.js`, 'text/javascript'),
   });
   ffmpegInstance = { ff, fetchFile };
   return ffmpegInstance;
