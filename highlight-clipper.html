@@ -338,6 +338,7 @@ async function getFFmpeg() {
   await ff.load({
     coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
     wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+    workerURL: await toBlobURL('https://esm.sh/@ffmpeg/ffmpeg@0.12.10/es2022/worker.js', 'text/javascript'),
   });
   ffmpegInstance = { ff, fetchFile };
   return ffmpegInstance;
