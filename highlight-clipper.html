@@ -228,6 +228,53 @@ async function analyzeAudio(file) {
   await audioCtx.close();
   return peaks;
 }
+
+async function analyzeFrames(file) {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.src = url; video.muted = true; video.preload = 'auto';
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const results = [];
+    let prevData = null;
+    let duration = 0;
+
+    video.addEventListener('loadedmetadata', () => {
+      duration = video.duration;
+      canvas.width = 160; canvas.height = 90;
+      seekNext(0);
+    });
+
+    function seekNext(t) {
+      if (t > duration) {
+        URL.revokeObjectURL(url);
+        resolve(results);
+        return;
+      }
+      video.currentTime = t;
+    }
+
+    video.addEventListener('seeked', () => {
+      ctx.drawImage(video, 0, 0, 160, 90);
+      const imgData = ctx.getImageData(0, 0, 160, 90).data;
+      if (prevData) {
+        let diff = 0;
+        for (let i = 0; i < imgData.length; i += 4) {
+          diff += Math.abs(imgData[i] - prevData[i]) +
+                  Math.abs(imgData[i+1] - prevData[i+1]) +
+                  Math.abs(imgData[i+2] - prevData[i+2]);
+        }
+        diff /= (160 * 90 * 3 * 255);
+        results.push({ t: video.currentTime, diff });
+      }
+      prevData = new Uint8ClampedArray(imgData);
+      seekNext(video.currentTime + 1);
+    });
+
+    video.load();
+  });
+}
 </script>
 </body>
 </html>
