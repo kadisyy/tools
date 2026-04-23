@@ -361,17 +361,22 @@ async function cutClip(ff, fetchFile, clip, idx, card) {
   const progressEl = card.querySelector('.clip-progress');
   progressEl.textContent = '剪辑中...';
 
-  ff.on('progress', ({ progress }) => {
+  const onProgress = ({ progress }) => {
     progressEl.textContent = `处理中 ${Math.round(progress * 100)}%`;
-  });
+  };
+  ff.on('progress', onProgress);
 
-  await ff.exec([
-    '-ss', String(clip.start),
-    '-to', String(clip.end),
-    '-i', 'input.mp4',
-    '-c', 'copy',
-    outName
-  ]);
+  try {
+    await ff.exec([
+      '-ss', String(clip.start),
+      '-to', String(clip.end),
+      '-i', 'input.mp4',
+      '-c', 'copy',
+      outName
+    ]);
+  } finally {
+    ff.off('progress', onProgress);
+  }
 
   const data = await ff.readFile(outName);
   const blob = new Blob([data.buffer], { type: 'video/mp4' });
