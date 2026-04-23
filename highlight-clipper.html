@@ -354,6 +354,7 @@ async function generateClips(file, clips) {
     clipsEl.appendChild(card);
     await cutClip(ff, fetchFile, clip, i, card);
   }
+  try { await ff.deleteFile('input.mp4'); } catch {}
 }
 
 async function cutClip(ff, fetchFile, clip, idx, card) {
@@ -379,18 +380,20 @@ async function cutClip(ff, fetchFile, clip, idx, card) {
   }
 
   const data = await ff.readFile(outName);
-  const blob = new Blob([data.buffer], { type: 'video/mp4' });
+  const blob = new Blob([data], { type: 'video/mp4' });
   clip._blob = blob;
   clip._outName = outName;
 
   const dlBtn = card.querySelector('.btn-dl');
   dlBtn.disabled = false;
-  dlBtn.addEventListener('click', () => {
+  dlBtn.onclick = () => {
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    a.href = url;
     a.download = `highlight_${idx+1}.mp4`;
     a.click();
-  });
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  };
 
   progressEl.textContent = '完成';
 
@@ -410,14 +413,15 @@ async function cutClip(ff, fetchFile, clip, idx, card) {
       const newBlob = await burnSubtitle(ff, clip, idx, text, progressEl);
       clip._blob = newBlob;
 
-      dlBtn.onclick = null;
       dlBtn.disabled = false;
-      dlBtn.addEventListener('click', () => {
+      dlBtn.onclick = () => {
+        const url = URL.createObjectURL(newBlob);
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(newBlob);
+        a.href = url;
         a.download = `highlight_${idx+1}_sub.mp4`;
         a.click();
-      });
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      };
       progressEl.textContent = '字幕已烧录';
     } catch (err) {
       progressEl.textContent = '烧录失败: ' + err.message;
@@ -433,8 +437,9 @@ async function burnSubtitle(ff, clip, idx, text, progressEl) {
 
   const escaped = text
     .replace(/\\/g, '\\\\')
-    .replace(/'/g, '\u2019')
+    .replace(/'/g, "\\'")
     .replace(/:/g, '\\:')
+    .replace(/%/g, '%%')
     .replace(/\n/g, ' ');
 
   const filterArgs = escaped
@@ -445,6 +450,8 @@ async function burnSubtitle(ff, clip, idx, text, progressEl) {
     progressEl.textContent = `烧录中 ${Math.round(progress * 100)}%`;
   };
   ff.on('progress', onProgress);
+
+  try { await ff.deleteFile(outName); } catch {}
 
   try {
     await ff.exec([
@@ -458,7 +465,8 @@ async function burnSubtitle(ff, clip, idx, text, progressEl) {
   }
 
   const data = await ff.readFile(outName);
-  return new Blob([data.buffer], { type: 'video/mp4' });
+  try { await ff.deleteFile(outName); } catch {}
+  return new Blob([data], { type: 'video/mp4' });
 }
 
 function createClipCard(idx, clip) {
