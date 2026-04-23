@@ -48,7 +48,7 @@ body::after {
 .wrapper {
   position: relative; z-index: 1;
   min-height: 100vh; display: flex; flex-direction: column;
-  max-width: 860px; margin: 0 auto; padding: 0 44px 72px;
+  max-width: 1200px; margin: 0 auto; padding: 0 44px 72px;
 }
 
 header { padding: 52px 0 0; margin-bottom: 48px; }
@@ -87,10 +87,27 @@ header { padding: 52px 0 0; margin-bottom: 48px; }
 .progress-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, var(--pink), var(--purple)); width: 0%; transition: width 0.3s; }
 
-#clips { margin-top: 40px; display: flex; flex-direction: column; gap: 24px; }
+#clips {
+  margin-top: 40px;
+  display: flex; flex-direction: row; gap: 20px;
+  overflow-x: auto; padding-bottom: 16px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+#clips::-webkit-scrollbar { height: 4px; }
+#clips::-webkit-scrollbar-track { background: var(--border); border-radius: 2px; }
+#clips::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 .clip-card {
   background: var(--surface); border: 1.5px solid var(--border);
-  padding: 24px; border-radius: 4px;
+  padding: 20px; border-radius: 4px;
+  flex: 0 0 340px; scroll-snap-align: start;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.clip-card:hover { border-color: var(--pink); }
+.clip-video {
+  width: 100%; aspect-ratio: 16/9;
+  background: #000; border-radius: 2px;
+  display: block; object-fit: contain;
 }
 .clip-card-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
 .clip-num { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.15em; }
@@ -356,6 +373,11 @@ async function cutClip(file, clip, idx, card) {
 
   progressEl.textContent = '完成';
 
+  // set video preview
+  const videoEl = card.querySelector('.clip-video');
+  const previewUrl = URL.createObjectURL(blob);
+  videoEl.src = previewUrl;
+
   const renderBtn = card.querySelector('.btn-render');
   const subtitleInput = card.querySelector('.clip-subtitle-input');
   renderBtn.disabled = false;
@@ -380,6 +402,10 @@ async function cutClip(file, clip, idx, card) {
         setTimeout(() => URL.revokeObjectURL(url), 100);
       };
       progressEl.textContent = '字幕已烧录';
+      // update video preview
+      const videoEl = card.querySelector('.clip-video');
+      if (videoEl.src) URL.revokeObjectURL(videoEl.src);
+      videoEl.src = URL.createObjectURL(newBlob);
     } catch (err) {
       progressEl.textContent = '烧录失败: ' + err.message;
     } finally {
@@ -523,10 +549,11 @@ function createClipCard(idx, clip) {
       <span class="clip-time">${fmt(clip.start)} – ${fmt(clip.end)}</span>
       <span class="clip-score">SCORE ${clip.score.toFixed(2)}</span>
     </div>
+    <video class="clip-video" controls playsinline></video>
     <div class="clip-subtitle-label">字幕 / SUBTITLE</div>
     <textarea class="clip-subtitle-input" placeholder="输入字幕文字（留空则不添加字幕）"></textarea>
     <div class="clip-actions">
-      <button class="btn btn-render" disabled>烧录字幕并重新生成</button>
+      <button class="btn btn-render" disabled>烧录字幕</button>
       <button class="btn btn-primary btn-dl" disabled>下载</button>
     </div>
     <div class="clip-progress"></div>
