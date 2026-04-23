@@ -151,7 +151,6 @@ footer {
     <div class="footer-dots"><span></span><span></span><span></span></div>
   </footer>
 </div>
-<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 <script>
 const fileInput = document.getElementById('fileInput');
 const statusEl = document.getElementById('status');
@@ -327,57 +326,22 @@ function mergeScores(audioPeaks, frameDiffs) {
   return merged.sort((a, b) => b.score - a.score).slice(0, 8);
 }
 
-let ffmpegInstance = null;
-
-async function getFFmpeg() {
-  if (ffmpegInstance) return ffmpegInstance;
-  const { createFFmpeg, fetchFile } = FFmpeg;
-  const ff = createFFmpeg({
-    corePath: 'https://unpkg.com/@ffmpeg/core-st@0.11.1/dist/ffmpeg-core.js',
-    log: false,
-  });
-  await ff.load();
-  ffmpegInstance = { ff, fetchFile };
-  return ffmpegInstance;
-}
-
 async function generateClips(file, clips) {
-  setStatus('加载 ffmpeg...', 82);
-  const { ff, fetchFile } = await getFFmpeg();
-  ff.FS('writeFile', 'input.mp4', await fetchFile(file));
-
   for (let i = 0; i < clips.length; i++) {
     const clip = clips[i];
     const card = createClipCard(i, clip);
     clipsEl.appendChild(card);
-    await cutClip(ff, fetchFile, clip, i, card);
+    setStatus(`生成片段 ${i+1} / ${clips.length}...`, 80 + (i / clips.length) * 18);
+    await cutClip(file, clip, i, card);
   }
-  try { ff.FS('unlink', 'input.mp4'); } catch {}
 }
 
-async function cutClip(ff, fetchFile, clip, idx, card) {
-  const outName = `clip_${idx}.mp4`;
+async function cutClip(file, clip, idx, card) {
   const progressEl = card.querySelector('.clip-progress');
   progressEl.textContent = '剪辑中...';
 
-  ff.setProgress(({ ratio }) => {
-    progressEl.textContent = `处理中 ${Math.round(ratio * 100)}%`;
-  });
-
-  await ff.run(
-    '-ss', String(clip.start),
-    '-to', String(clip.end),
-    '-i', 'input.mp4',
-    '-c', 'copy',
-    outName
-  );
-
-  ff.setProgress(() => {});
-
-  const data = ff.FS('readFile', outName);
-  const blob = new Blob([data.buffer], { type: 'video/mp4' });
+  const blob = await recordClip(file, clip.start, clip.end, progressEl);
   clip._blob = blob;
-  clip._outName = outName;
 
   const dlBtn = card.querySelector('.btn-dl');
   dlBtn.disabled = false;
@@ -385,7 +349,7 @@ async function cutClip(ff, fetchFile, clip, idx, card) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `highlight_${idx+1}.mp4`;
+    a.download = `highlight_${idx+1}.webm`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 100);
   };
@@ -403,17 +367,15 @@ async function cutClip(ff, fetchFile, clip, idx, card) {
     dlBtn.disabled = true;
     const progressEl = card.querySelector('.clip-progress');
     progressEl.textContent = '烧录字幕中...';
-
     try {
-      const newBlob = await burnSubtitle(ff, clip, idx, text, progressEl);
+      const newBlob = await burnSubtitle(clip._blob, text, progressEl);
       clip._blob = newBlob;
-
       dlBtn.disabled = false;
       dlBtn.onclick = () => {
         const url = URL.createObjectURL(newBlob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `highlight_${idx+1}_sub.mp4`;
+        a.download = `highlight_${idx+1}_sub.webm`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 100);
       };
@@ -426,34 +388,126 @@ async function cutClip(ff, fetchFile, clip, idx, card) {
   });
 }
 
-async function burnSubtitle(ff, clip, idx, text, progressEl) {
-  const inName = `clip_${idx}.mp4`;
-  const outName = `clip_${idx}_sub.mp4`;
+function recordClip(file, start, end, progressEl) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.src = url;
+    video.muted = false;
+    video.preload = 'auto';
 
-  const escaped = text
-    .replace(/\\/g, '\\\\')
-    .replace(/'/g, "\\'")
-    .replace(/:/g, '\\:')
-    .replace(/%/g, '%%')
-    .replace(/\n/g, ' ');
+    video.addEventListener('loadedmetadata', () => {
+      const duration = end - start;
+      const stream = video.captureStream();
+      const recorder = new MediaRecorder(stream, { mimeType: getSupportedMime() });
+      const chunks = [];
 
-  const filterArgs = escaped
-    ? `drawtext=text='${escaped}':fontcolor=white:bordercolor=black:borderw=2:fontsize=24:x=(w-text_w)/2:y=h-60`
-    : 'null';
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      recorder.onstop = () => {
+        URL.revokeObjectURL(url);
+        resolve(new Blob(chunks, { type: recorder.mimeType }));
+      };
+      recorder.onerror = e => { URL.revokeObjectURL(url); reject(e.error); };
 
-  ff.setProgress(({ ratio }) => {
-    progressEl.textContent = `烧录中 ${Math.round(ratio * 100)}%`;
+      video.currentTime = start;
+      video.addEventListener('seeked', () => {
+        video.play();
+        recorder.start(100);
+
+        const interval = setInterval(() => {
+          const elapsed = video.currentTime - start;
+          const pct = Math.min(elapsed / duration, 1);
+          progressEl.textContent = `处理中 ${Math.round(pct * 100)}%`;
+          if (video.currentTime >= end - 0.1) {
+            clearInterval(interval);
+            recorder.stop();
+            video.pause();
+          }
+        }, 200);
+      }, { once: true });
+    });
+
+    video.addEventListener('error', () => { URL.revokeObjectURL(url); reject(new Error('视频加载失败')); });
+    video.load();
   });
+}
 
-  try { ff.FS('unlink', outName); } catch {}
+function getSupportedMime() {
+  const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  return types.find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
+}
 
-  await ff.run('-i', inName, '-vf', filterArgs, '-c:a', 'copy', outName);
+async function burnSubtitle(sourceBlob, text, progressEl) {
+  if (!text) return sourceBlob;
+  progressEl.textContent = '烧录字幕中...';
 
-  ff.setProgress(() => {});
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(sourceBlob);
+    const video = document.createElement('video');
+    video.src = url;
+    video.muted = false;
+    video.preload = 'auto';
 
-  const data = ff.FS('readFile', outName);
-  try { ff.FS('unlink', outName); } catch {}
-  return new Blob([data.buffer], { type: 'video/mp4' });
+    video.addEventListener('loadedmetadata', () => {
+      const canvas = document.createElement('canvas');
+      const offscreen = document.createElement('canvas');
+
+      video.addEventListener('loadeddata', () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        offscreen.width = video.videoWidth;
+        offscreen.height = video.videoHeight;
+
+        const stream = canvas.captureStream(30);
+        // add audio
+        try {
+          const audioStream = video.captureStream();
+          audioStream.getAudioTracks().forEach(t => stream.addTrack(t));
+        } catch {}
+
+        const recorder = new MediaRecorder(stream, { mimeType: getSupportedMime() });
+        const chunks = [];
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => {
+          URL.revokeObjectURL(url);
+          resolve(new Blob(chunks, { type: recorder.mimeType }));
+        };
+
+        const ctx = canvas.getContext('2d');
+        const fontSize = Math.round(canvas.height * 0.05);
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.textAlign = 'center';
+
+        function drawFrame() {
+          if (video.ended || video.paused) return;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          // draw subtitle
+          const x = canvas.width / 2;
+          const y = canvas.height - fontSize * 1.5;
+          ctx.font = `bold ${fontSize}px sans-serif`;
+          ctx.strokeStyle = 'black';
+          ctx.lineWidth = fontSize * 0.12;
+          ctx.strokeText(text, x, y);
+          ctx.fillStyle = 'white';
+          ctx.fillText(text, x, y);
+          requestAnimationFrame(drawFrame);
+        }
+
+        video.play();
+        recorder.start(100);
+        drawFrame();
+
+        video.addEventListener('ended', () => {
+          recorder.stop();
+        });
+
+        progressEl.textContent = '烧录中...';
+      }, { once: true });
+    });
+
+    video.addEventListener('error', () => { URL.revokeObjectURL(url); reject(new Error('加载失败')); });
+    video.load();
+  });
 }
 
 function createClipCard(idx, clip) {
