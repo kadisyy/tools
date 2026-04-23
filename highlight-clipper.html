@@ -83,54 +83,70 @@ header { padding: 52px 0 0; margin-bottom: 48px; }
 .drop-zone input[type=file] { display: none; }
 .drop-label { font-family: var(--mono); font-size: 13px; color: var(--text3); letter-spacing: 0.1em; }
 
-#status { margin-top: 32px; font-family: var(--mono); font-size: 12px; color: var(--text3); min-height: 20px; }
+/* Video preview area */
+#videoWrap {
+  display: none;
+  margin-bottom: 24px;
+}
+#videoWrap.visible { display: block; }
+#mainVideo {
+  width: 100%; max-height: 420px;
+  background: #000; border-radius: 2px;
+  display: block; object-fit: contain;
+  border: 1.5px solid var(--border);
+}
+
+#status { margin-top: 24px; font-family: var(--mono); font-size: 12px; color: var(--text3); min-height: 20px; }
 .progress-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, var(--pink), var(--purple)); width: 0%; transition: width 0.3s; }
 
+/* Horizontal scroll clips */
 #clips {
-  margin-top: 40px;
-  display: flex; flex-direction: row; gap: 20px;
+  margin-top: 32px;
+  display: flex; gap: 20px;
   overflow-x: auto; padding-bottom: 16px;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
 }
 #clips::-webkit-scrollbar { height: 4px; }
-#clips::-webkit-scrollbar-track { background: var(--border); border-radius: 2px; }
+#clips::-webkit-scrollbar-track { background: var(--border); }
 #clips::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
 .clip-card {
+  flex: 0 0 320px; scroll-snap-align: start;
   background: var(--surface); border: 1.5px solid var(--border);
-  padding: 20px; border-radius: 4px;
-  flex: 0 0 340px; scroll-snap-align: start;
-  display: flex; flex-direction: column; gap: 12px;
+  border-radius: 4px; padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: border-color 0.2s;
 }
 .clip-card:hover { border-color: var(--pink); }
+.clip-header { display: flex; align-items: center; gap: 10px; }
+.clip-num { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.15em; }
+.clip-time { font-family: var(--mono); font-size: 12px; color: var(--text); }
+.clip-score { font-family: var(--mono); font-size: 10px; color: var(--pink); margin-left: auto; }
 .clip-video {
   width: 100%; aspect-ratio: 16/9;
   background: #000; border-radius: 2px;
   display: block; object-fit: contain;
 }
-.clip-card-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-.clip-num { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.15em; }
-.clip-time { font-family: var(--mono); font-size: 13px; color: var(--text); }
-.clip-score { font-family: var(--mono); font-size: 11px; color: var(--pink); margin-left: auto; }
-.clip-subtitle-label { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.1em; margin-bottom: 8px; }
-.clip-subtitle-input {
-  width: 100%; min-height: 72px; resize: vertical;
+.clip-sub-label { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.1em; }
+.clip-sub-input {
+  width: 100%; min-height: 60px; resize: vertical;
   background: var(--surface2); border: 1px solid var(--border);
   color: var(--text); font-family: var(--mono); font-size: 12px;
-  padding: 10px 12px; border-radius: 2px; line-height: 1.6;
+  padding: 8px 10px; border-radius: 2px; line-height: 1.6;
 }
-.clip-actions { display: flex; gap: 12px; margin-top: 16px; }
+.clip-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn {
-  font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
-  padding: 8px 20px; border: 1.5px solid var(--border2);
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+  padding: 7px 14px; border: 1.5px solid var(--border2);
   background: var(--surface); color: var(--text2); cursor: pointer;
   transition: border-color 0.2s, color 0.2s; border-radius: 2px;
 }
 .btn:hover { border-color: var(--pink); color: var(--pink); }
 .btn-primary { border-color: var(--pink); color: var(--pink); }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.clip-progress { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-top: 8px; min-height: 16px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+.clip-status { font-family: var(--mono); font-size: 10px; color: var(--text3); min-height: 14px; }
 
 footer {
   margin-top: auto; padding-top: 48px;
@@ -150,16 +166,24 @@ footer {
       <span class="tool-badge">TOOL_006</span>
     </div>
     <h1 class="page-title">燃点剪辑</h1>
-    <p class="page-desc">上传长视频，自动检测高爆点，生成多个短视频片段，支持字幕编辑后重新渲染下载。</p>
+    <p class="page-desc">上传长视频，自动检测高爆点，生成多个短视频片段，支持字幕编辑后下载。</p>
   </header>
 
+  <!-- Video preview (shown after upload) -->
+  <div id="videoWrap">
+    <video id="mainVideo" controls playsinline></video>
+  </div>
+
+  <!-- Drop zone (hidden after upload) -->
   <div class="drop-zone" id="dropZone">
     <input type="file" id="fileInput" accept="video/*">
-    <div class="drop-label">拖拽视频文件到此处，或点击选择<br><span style="color:var(--text3);font-size:11px">支持 MP4 / MOV / MKV / AVI / WEBM</span></div>
+    <div class="drop-label">拖拽视频文件到此处，或点击选择<br><span style="font-size:11px">支持 MP4 / MOV / MKV / AVI / WEBM</span></div>
   </div>
 
   <div id="status"></div>
-  <div class="progress-bar" id="progressBar" style="display:none"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-bar" id="progressBar" style="display:none">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
 
   <div id="clips"></div>
 
@@ -169,11 +193,16 @@ footer {
   </footer>
 </div>
 <script>
+const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const statusEl = document.getElementById('status');
 const progressBar = document.getElementById('progressBar');
 const progressFill = document.getElementById('progressFill');
 const clipsEl = document.getElementById('clips');
+const videoWrap = document.getElementById('videoWrap');
+const mainVideo = document.getElementById('mainVideo');
+
+let sourceFile = null;
 
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -181,9 +210,9 @@ dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-ove
 dropZone.addEventListener('drop', e => {
   e.preventDefault(); dropZone.classList.remove('drag-over');
   const f = e.dataTransfer.files[0];
-  if (f && f.type.startsWith('video/')) handleFile(f);
+  if (f && f.type.startsWith('video/')) loadFile(f);
 });
-fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
 
 function setStatus(msg, pct) {
   statusEl.textContent = msg;
@@ -193,18 +222,33 @@ function setStatus(msg, pct) {
   }
 }
 
-async function handleFile(file) {
+function loadFile(file) {
+  sourceFile = file;
   clipsEl.innerHTML = '';
+  // Show video preview
+  const url = URL.createObjectURL(file);
+  mainVideo.src = url;
+  videoWrap.classList.add('visible');
+  dropZone.style.display = 'none';
+  // Start analysis
+  analyzeFile(file);
+}
+
+async function analyzeFile(file) {
   try {
     setStatus('正在解码音频...', 5);
     const peaks = await analyzeAudio(file);
-    setStatus('音频分析完成，正在分析视频帧...', 40);
-    const shotChanges = await analyzeFrames(file);
-    setStatus('合并分析结果...', 75);
-    const clips = mergeScores(peaks, shotChanges);
-    setStatus(`检测到 ${clips.length} 个燃点片段，开始生成...`, 80);
+    setStatus('分析视频帧...', 40);
+    const frameDiffs = await analyzeFrames(file);
+    setStatus('计算燃点...', 75);
+    const clips = mergeScores(peaks, frameDiffs);
+    if (clips.length === 0) {
+      setStatus('未检测到明显燃点，请手动调整');
+      return;
+    }
+    setStatus(`检测到 ${clips.length} 个燃点，生成中...`, 80);
     await generateClips(file, clips);
-    setStatus('全部完成', 100);
+    setStatus('完成', 100);
   } catch (err) {
     setStatus('错误: ' + err.message);
     progressBar.style.display = 'none';
@@ -217,35 +261,27 @@ async function analyzeAudio(file) {
   try {
     const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
     const data = audioBuffer.getChannelData(0);
-    const sampleRate = audioBuffer.sampleRate;
-    const windowSize = Math.floor(sampleRate * 1.0);
-    const stepSize = Math.floor(sampleRate * 0.1);
+    const sr = audioBuffer.sampleRate;
+    const winSize = Math.floor(sr * 1.0);
+    const step = Math.floor(sr * 0.1);
     const energies = [];
-
-    for (let i = 0; i + windowSize < data.length; i += stepSize) {
+    for (let i = 0; i + winSize < data.length; i += step) {
       let sum = 0;
-      for (let j = i; j < i + windowSize; j++) sum += data[j] * data[j];
-      energies.push({ t: i / sampleRate, rms: Math.sqrt(sum / windowSize) });
+      for (let j = i; j < i + winSize; j++) sum += data[j] * data[j];
+      energies.push({ t: i / sr, rms: Math.sqrt(sum / winSize) });
     }
-
     if (energies.length === 0) return [];
-
     const smoothed = energies.map((e, i) => {
-      const w = 5;
-      const slice = energies.slice(Math.max(0, i-w), i+w+1);
+      const slice = energies.slice(Math.max(0, i-5), i+6);
       return { t: e.t, rms: slice.reduce((s,x) => s+x.rms, 0) / slice.length };
     });
-
     const vals = smoothed.map(e => e.rms);
     const mean = vals.reduce((a,b) => a+b, 0) / vals.length;
     const std = Math.sqrt(vals.map(v => (v-mean)**2).reduce((a,b) => a+b, 0) / vals.length);
     const threshold = mean + 1.5 * std;
-
     const peaks = [];
     for (let i = 1; i < smoothed.length - 1; i++) {
-      if (smoothed[i].rms > threshold &&
-          smoothed[i].rms >= smoothed[i-1].rms &&
-          smoothed[i].rms >= smoothed[i+1].rms) {
+      if (smoothed[i].rms > threshold && smoothed[i].rms >= smoothed[i-1].rms && smoothed[i].rms >= smoothed[i+1].rms) {
         peaks.push({ t: smoothed[i].t, score: smoothed[i].rms / (mean + std) });
       }
     }
@@ -264,83 +300,54 @@ async function analyzeFrames(file) {
     const ctx = canvas.getContext('2d');
     const results = [];
     let prevData = null;
-    let duration = 0;
-
+    video.addEventListener('error', () => { URL.revokeObjectURL(url); resolve([]); });
     video.addEventListener('loadedmetadata', () => {
-      duration = video.duration;
       canvas.width = 160; canvas.height = 90;
       seekNext(0);
     });
-
-    video.addEventListener('error', () => { URL.revokeObjectURL(url); resolve([]); });
-
     function seekNext(t) {
-      if (t > duration) {
-        URL.revokeObjectURL(url);
-        resolve(results);
-        return;
-      }
+      if (t > video.duration) { URL.revokeObjectURL(url); resolve(results); return; }
       video.currentTime = t;
     }
-
     video.addEventListener('seeked', () => {
       ctx.drawImage(video, 0, 0, 160, 90);
       const imgData = ctx.getImageData(0, 0, 160, 90).data;
       if (prevData) {
         let diff = 0;
         for (let i = 0; i < imgData.length; i += 4) {
-          diff += Math.abs(imgData[i] - prevData[i]) +
-                  Math.abs(imgData[i+1] - prevData[i+1]) +
-                  Math.abs(imgData[i+2] - prevData[i+2]);
+          diff += Math.abs(imgData[i]-prevData[i]) + Math.abs(imgData[i+1]-prevData[i+1]) + Math.abs(imgData[i+2]-prevData[i+2]);
         }
-        diff /= (160 * 90 * 3 * 255);
-        results.push({ t: video.currentTime, diff });
+        results.push({ t: video.currentTime, diff: diff / (160*90*3*255) });
       }
       prevData = new Uint8ClampedArray(imgData);
       seekNext(video.currentTime + 1);
     });
-
     video.load();
   });
 }
 
 function mergeScores(audioPeaks, frameDiffs) {
   const buckets = {};
-
   for (const p of audioPeaks) {
     const t = Math.floor(p.t);
     buckets[t] = (buckets[t] || 0) + p.score * 0.6;
   }
-
   const maxDiff = frameDiffs.reduce((m, f) => Math.max(m, f.diff), 0.001);
   for (const f of frameDiffs) {
     const t = Math.floor(f.t);
     buckets[t] = (buckets[t] || 0) + (f.diff / maxDiff) * 0.4;
   }
-
-  const sorted = Object.entries(buckets)
-    .map(([t, s]) => ({ t: Number(t), s }))
-    .sort((a, b) => b.s - a.s)
-    .slice(0, 20);
-
-  const raw = sorted.map(p => ({
-    start: Math.max(0, p.t - 10),
-    end: p.t + 10,
-    score: p.s
-  }));
-
-  raw.sort((a, b) => a.start - b.start);
+  const sorted = Object.entries(buckets).map(([t,s]) => ({t:Number(t),s})).sort((a,b)=>b.s-a.s).slice(0,20);
+  const raw = sorted.map(p => ({ start: Math.max(0, p.t-10), end: p.t+10, score: p.s }));
+  raw.sort((a,b) => a.start-b.start);
   const merged = [];
   for (const c of raw) {
     if (merged.length && c.start < merged[merged.length-1].end) {
       merged[merged.length-1].end = Math.max(merged[merged.length-1].end, c.end);
       merged[merged.length-1].score = Math.max(merged[merged.length-1].score, c.score);
-    } else {
-      merged.push({ ...c });
-    }
+    } else merged.push({...c});
   }
-
-  return merged.sort((a, b) => b.score - a.score).slice(0, 8);
+  return merged.sort((a,b)=>b.score-a.score).slice(0,8);
 }
 
 async function generateClips(file, clips) {
@@ -348,215 +355,186 @@ async function generateClips(file, clips) {
     const clip = clips[i];
     const card = createClipCard(i, clip);
     clipsEl.appendChild(card);
-    setStatus(`生成片段 ${i+1} / ${clips.length}...`, 80 + (i / clips.length) * 18);
+    setStatus(`生成片段 ${i+1}/${clips.length}...`, 80 + (i/clips.length)*18);
     await cutClip(file, clip, i, card);
   }
 }
 
-async function cutClip(file, clip, idx, card) {
-  const progressEl = card.querySelector('.clip-progress');
-  progressEl.textContent = '剪辑中...';
+function getSupportedMime() {
+  const types = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  return types.find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
+}
 
-  const blob = await recordClip(file, clip.start, clip.end, progressEl);
+function recordSegment(file, start, end, onProgress) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.src = url;
+    video.muted = true; // MUST be muted for autoplay to work without user gesture
+    video.preload = 'auto';
+
+    video.addEventListener('error', () => { URL.revokeObjectURL(url); reject(new Error('视频加载失败')); });
+
+    video.addEventListener('loadedmetadata', () => {
+      const clampedEnd = Math.min(end, video.duration);
+      const stream = video.captureStream();
+      const mime = getSupportedMime();
+      const recorder = new MediaRecorder(stream, { mimeType: mime });
+      const chunks = [];
+
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      recorder.onstop = () => {
+        URL.revokeObjectURL(url);
+        resolve(new Blob(chunks, { type: mime }));
+      };
+      recorder.onerror = e => { URL.revokeObjectURL(url); reject(e.error || new Error('录制失败')); };
+
+      // Seek to start, then play+record
+      video.currentTime = start;
+      video.addEventListener('seeked', () => {
+        recorder.start(100);
+        video.play().catch(err => { URL.revokeObjectURL(url); reject(err); });
+      }, { once: true });
+
+      // Use timeupdate to stop at end — more reliable than setInterval
+      video.addEventListener('timeupdate', () => {
+        if (video.currentTime >= clampedEnd) {
+          video.pause();
+          if (recorder.state === 'recording') recorder.stop();
+          const pct = 100;
+          onProgress(pct);
+        } else {
+          const pct = Math.round((video.currentTime - start) / (clampedEnd - start) * 100);
+          onProgress(Math.min(pct, 99));
+        }
+      });
+
+      // Fallback: ended event
+      video.addEventListener('ended', () => {
+        if (recorder.state === 'recording') recorder.stop();
+      });
+    });
+
+    video.load();
+  });
+}
+
+async function cutClip(file, clip, idx, card) {
+  const statusEl = card.querySelector('.clip-status');
+  statusEl.textContent = '剪辑中...';
+
+  const blob = await recordSegment(file, clip.start, clip.end, pct => {
+    statusEl.textContent = `处理中 ${pct}%`;
+  });
   clip._blob = blob;
+
+  // Set video preview
+  const videoEl = card.querySelector('.clip-video');
+  videoEl.src = URL.createObjectURL(blob);
 
   const dlBtn = card.querySelector('.btn-dl');
   dlBtn.disabled = false;
-  dlBtn.onclick = () => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `highlight_${idx+1}.webm`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 100);
-  };
+  dlBtn.onclick = () => downloadBlob(blob, `highlight_${idx+1}.webm`);
 
-  progressEl.textContent = '完成';
-
-  // set video preview
-  const videoEl = card.querySelector('.clip-video');
-  const previewUrl = URL.createObjectURL(blob);
-  videoEl.src = previewUrl;
+  statusEl.textContent = '完成';
 
   const renderBtn = card.querySelector('.btn-render');
-  const subtitleInput = card.querySelector('.clip-subtitle-input');
   renderBtn.disabled = false;
-
   renderBtn.addEventListener('click', async () => {
-    const text = subtitleInput.value.trim();
+    const text = card.querySelector('.clip-sub-input').value.trim();
     renderBtn.disabled = true;
-    const dlBtn = card.querySelector('.btn-dl');
     dlBtn.disabled = true;
-    const progressEl = card.querySelector('.clip-progress');
-    progressEl.textContent = '烧录字幕中...';
+    statusEl.textContent = '烧录字幕...';
     try {
-      const newBlob = await burnSubtitle(clip._blob, text, progressEl);
+      const newBlob = await burnSubtitle(clip._blob, text, p => { statusEl.textContent = `烧录中 ${p}%`; });
       clip._blob = newBlob;
-      dlBtn.disabled = false;
-      dlBtn.onclick = () => {
-        const url = URL.createObjectURL(newBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `highlight_${idx+1}_sub.webm`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 100);
-      };
-      progressEl.textContent = '字幕已烧录';
-      // update video preview
-      const videoEl = card.querySelector('.clip-video');
       if (videoEl.src) URL.revokeObjectURL(videoEl.src);
       videoEl.src = URL.createObjectURL(newBlob);
+      dlBtn.disabled = false;
+      dlBtn.onclick = () => downloadBlob(newBlob, `highlight_${idx+1}_sub.webm`);
+      statusEl.textContent = '字幕已烧录';
     } catch (err) {
-      progressEl.textContent = '烧录失败: ' + err.message;
+      statusEl.textContent = '失败: ' + err.message;
     } finally {
       renderBtn.disabled = false;
     }
   });
 }
 
-function recordClip(file, start, end, progressEl) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const video = document.createElement('video');
-    video.src = url;
-    video.muted = false;
-    video.preload = 'auto';
-
-    video.addEventListener('loadedmetadata', () => {
-      const duration = end - start;
-      const stream = video.captureStream();
-      const recorder = new MediaRecorder(stream, { mimeType: getSupportedMime() });
-      const chunks = [];
-
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-      recorder.onstop = () => {
-        URL.revokeObjectURL(url);
-        resolve(new Blob(chunks, { type: recorder.mimeType }));
-      };
-      recorder.onerror = e => { URL.revokeObjectURL(url); reject(e.error); };
-
-      video.currentTime = start;
-      video.addEventListener('seeked', () => {
-        video.play();
-        recorder.start(100);
-
-        const interval = setInterval(() => {
-          const elapsed = video.currentTime - start;
-          const pct = Math.min(elapsed / duration, 1);
-          progressEl.textContent = `处理中 ${Math.round(pct * 100)}%`;
-          if (video.currentTime >= end - 0.1) {
-            clearInterval(interval);
-            recorder.stop();
-            video.pause();
-          }
-        }, 200);
-      }, { once: true });
-    });
-
-    video.addEventListener('error', () => { URL.revokeObjectURL(url); reject(new Error('视频加载失败')); });
-    video.load();
-  });
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
-function getSupportedMime() {
-  const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-  return types.find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
-}
-
-async function burnSubtitle(sourceBlob, text, progressEl) {
-  if (!text) return sourceBlob;
-  progressEl.textContent = '烧录字幕中...';
-
+function burnSubtitle(sourceBlob, text, onProgress) {
+  if (!text) return Promise.resolve(sourceBlob);
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(sourceBlob);
     const video = document.createElement('video');
-    video.src = url;
-    video.muted = false;
-    video.preload = 'auto';
-
-    video.addEventListener('loadedmetadata', () => {
-      const canvas = document.createElement('canvas');
-      const offscreen = document.createElement('canvas');
-
-      video.addEventListener('loadeddata', () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        offscreen.width = video.videoWidth;
-        offscreen.height = video.videoHeight;
-
-        const stream = canvas.captureStream(30);
-        // add audio
-        try {
-          const audioStream = video.captureStream();
-          audioStream.getAudioTracks().forEach(t => stream.addTrack(t));
-        } catch {}
-
-        const recorder = new MediaRecorder(stream, { mimeType: getSupportedMime() });
-        const chunks = [];
-        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-        recorder.onstop = () => {
-          URL.revokeObjectURL(url);
-          resolve(new Blob(chunks, { type: recorder.mimeType }));
-        };
-
-        const ctx = canvas.getContext('2d');
-        const fontSize = Math.round(canvas.height * 0.05);
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        ctx.textAlign = 'center';
-
-        function drawFrame() {
-          if (video.ended || video.paused) return;
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          // draw subtitle
-          const x = canvas.width / 2;
-          const y = canvas.height - fontSize * 1.5;
-          ctx.font = `bold ${fontSize}px sans-serif`;
-          ctx.strokeStyle = 'black';
-          ctx.lineWidth = fontSize * 0.12;
-          ctx.strokeText(text, x, y);
-          ctx.fillStyle = 'white';
-          ctx.fillText(text, x, y);
-          requestAnimationFrame(drawFrame);
-        }
-
-        video.play();
-        recorder.start(100);
-        drawFrame();
-
-        video.addEventListener('ended', () => {
-          recorder.stop();
-        });
-
-        progressEl.textContent = '烧录中...';
-      }, { once: true });
-    });
+    video.src = url; video.muted = true; video.preload = 'auto';
 
     video.addEventListener('error', () => { URL.revokeObjectURL(url); reject(new Error('加载失败')); });
+    video.addEventListener('loadeddata', () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
+      const ctx = canvas.getContext('2d');
+      const fontSize = Math.round(canvas.height * 0.055);
+
+      const stream = canvas.captureStream(30);
+      const mime = getSupportedMime();
+      const recorder = new MediaRecorder(stream, { mimeType: mime });
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      recorder.onstop = () => { URL.revokeObjectURL(url); resolve(new Blob(chunks, { type: mime })); };
+
+      function drawFrame() {
+        if (video.paused || video.ended) return;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const x = canvas.width / 2, y = canvas.height - fontSize * 1.8;
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.lineWidth = fontSize * 0.15;
+        ctx.strokeText(text, x, y);
+        ctx.fillStyle = '#fff'; ctx.fillText(text, x, y);
+        requestAnimationFrame(drawFrame);
+      }
+
+      video.addEventListener('timeupdate', () => {
+        onProgress(Math.round(video.currentTime / video.duration * 100));
+      });
+      video.addEventListener('ended', () => {
+        if (recorder.state === 'recording') recorder.stop();
+      });
+
+      recorder.start(100);
+      video.play().catch(reject);
+      drawFrame();
+    }, { once: true });
     video.load();
   });
 }
 
 function createClipCard(idx, clip) {
-  const fmt = s => {
-    const m = Math.floor(s/60), sec = Math.floor(s%60);
-    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-  };
+  const fmt = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
   const div = document.createElement('div');
   div.className = 'clip-card';
   div.innerHTML = `
-    <div class="clip-card-header">
+    <div class="clip-header">
       <span class="clip-num">CLIP_${String(idx+1).padStart(3,'0')}</span>
       <span class="clip-time">${fmt(clip.start)} – ${fmt(clip.end)}</span>
-      <span class="clip-score">SCORE ${clip.score.toFixed(2)}</span>
+      <span class="clip-score">★ ${clip.score.toFixed(2)}</span>
     </div>
-    <video class="clip-video" controls playsinline></video>
-    <div class="clip-subtitle-label">字幕 / SUBTITLE</div>
-    <textarea class="clip-subtitle-input" placeholder="输入字幕文字（留空则不添加字幕）"></textarea>
+    <video class="clip-video" controls playsinline muted></video>
+    <div class="clip-sub-label">字幕 / SUBTITLE</div>
+    <textarea class="clip-sub-input" placeholder="输入字幕（留空则不添加）"></textarea>
     <div class="clip-actions">
       <button class="btn btn-render" disabled>烧录字幕</button>
       <button class="btn btn-primary btn-dl" disabled>下载</button>
     </div>
-    <div class="clip-progress"></div>
+    <div class="clip-status">等待处理...</div>
   `;
   return div;
 }
