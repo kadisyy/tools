@@ -327,9 +327,91 @@ function mergeScores(audioPeaks, frameDiffs) {
   return merged.sort((a, b) => b.score - a.score).slice(0, 8);
 }
 
+let ffmpegInstance = null;
+
+async function getFFmpeg() {
+  if (ffmpegInstance) return ffmpegInstance;
+  const { FFmpeg } = await import('https://esm.sh/@ffmpeg/ffmpeg@0.12.10');
+  const { fetchFile, toBlobURL } = await import('https://esm.sh/@ffmpeg/util@0.12.1');
+  const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+  const ff = new FFmpeg();
+  await ff.load({
+    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+  });
+  ffmpegInstance = { ff, fetchFile };
+  return ffmpegInstance;
+}
+
 async function generateClips(file, clips) {
-  // implemented in Task 5
-  console.log('clips to generate:', clips);
+  setStatus('加载 ffmpeg...', 82);
+  const { ff, fetchFile } = await getFFmpeg();
+  await ff.writeFile('input.mp4', await fetchFile(file));
+
+  for (let i = 0; i < clips.length; i++) {
+    const clip = clips[i];
+    const card = createClipCard(i, clip);
+    clipsEl.appendChild(card);
+    await cutClip(ff, fetchFile, clip, i, card);
+  }
+}
+
+async function cutClip(ff, fetchFile, clip, idx, card) {
+  const outName = `clip_${idx}.mp4`;
+  const progressEl = card.querySelector('.clip-progress');
+  progressEl.textContent = '剪辑中...';
+
+  ff.on('progress', ({ progress }) => {
+    progressEl.textContent = `处理中 ${Math.round(progress * 100)}%`;
+  });
+
+  await ff.exec([
+    '-ss', String(clip.start),
+    '-to', String(clip.end),
+    '-i', 'input.mp4',
+    '-c', 'copy',
+    outName
+  ]);
+
+  const data = await ff.readFile(outName);
+  const blob = new Blob([data.buffer], { type: 'video/mp4' });
+  clip._blob = blob;
+  clip._outName = outName;
+
+  const dlBtn = card.querySelector('.btn-dl');
+  dlBtn.disabled = false;
+  dlBtn.addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `highlight_${idx+1}.mp4`;
+    a.click();
+  });
+
+  progressEl.textContent = '完成';
+}
+
+function createClipCard(idx, clip) {
+  const fmt = s => {
+    const m = Math.floor(s/60), sec = Math.floor(s%60);
+    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  };
+  const div = document.createElement('div');
+  div.className = 'clip-card';
+  div.innerHTML = `
+    <div class="clip-card-header">
+      <span class="clip-num">CLIP_${String(idx+1).padStart(3,'0')}</span>
+      <span class="clip-time">${fmt(clip.start)} – ${fmt(clip.end)}</span>
+      <span class="clip-score">SCORE ${clip.score.toFixed(2)}</span>
+    </div>
+    <div class="clip-subtitle-label">字幕 / SUBTITLE</div>
+    <textarea class="clip-subtitle-input" placeholder="输入字幕文字（留空则不添加字幕）"></textarea>
+    <div class="clip-actions">
+      <button class="btn btn-render" disabled>烧录字幕并重新生成</button>
+      <button class="btn btn-primary btn-dl" disabled>下载</button>
+    </div>
+    <div class="clip-progress"></div>
+  `;
+  return div;
 }
 </script>
 </body>
