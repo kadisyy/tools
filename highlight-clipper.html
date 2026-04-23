@@ -393,6 +393,72 @@ async function cutClip(ff, fetchFile, clip, idx, card) {
   });
 
   progressEl.textContent = '完成';
+
+  const renderBtn = card.querySelector('.btn-render');
+  const subtitleInput = card.querySelector('.clip-subtitle-input');
+  renderBtn.disabled = false;
+
+  renderBtn.addEventListener('click', async () => {
+    const text = subtitleInput.value.trim();
+    renderBtn.disabled = true;
+    const dlBtn = card.querySelector('.btn-dl');
+    dlBtn.disabled = true;
+    const progressEl = card.querySelector('.clip-progress');
+    progressEl.textContent = '烧录字幕中...';
+
+    try {
+      const newBlob = await burnSubtitle(ff, clip, idx, text, progressEl);
+      clip._blob = newBlob;
+
+      dlBtn.onclick = null;
+      dlBtn.disabled = false;
+      dlBtn.addEventListener('click', () => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(newBlob);
+        a.download = `highlight_${idx+1}_sub.mp4`;
+        a.click();
+      });
+      progressEl.textContent = '字幕已烧录';
+    } catch (err) {
+      progressEl.textContent = '烧录失败: ' + err.message;
+    } finally {
+      renderBtn.disabled = false;
+    }
+  });
+}
+
+async function burnSubtitle(ff, clip, idx, text, progressEl) {
+  const inName = `clip_${idx}.mp4`;
+  const outName = `clip_${idx}_sub.mp4`;
+
+  const escaped = text
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, '\u2019')
+    .replace(/:/g, '\\:')
+    .replace(/\n/g, ' ');
+
+  const filterArgs = escaped
+    ? `drawtext=text='${escaped}':fontcolor=white:bordercolor=black:borderw=2:fontsize=24:x=(w-text_w)/2:y=h-60`
+    : 'null';
+
+  const onProgress = ({ progress }) => {
+    progressEl.textContent = `烧录中 ${Math.round(progress * 100)}%`;
+  };
+  ff.on('progress', onProgress);
+
+  try {
+    await ff.exec([
+      '-i', inName,
+      '-vf', filterArgs,
+      '-c:a', 'copy',
+      outName
+    ]);
+  } finally {
+    ff.off('progress', onProgress);
+  }
+
+  const data = await ff.readFile(outName);
+  return new Blob([data.buffer], { type: 'video/mp4' });
 }
 
 function createClipCard(idx, clip) {
