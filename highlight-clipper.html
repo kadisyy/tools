@@ -510,8 +510,7 @@ function burnSubtitle(sourceBlob, text, onProgress) {
       });
 
       recorder.start(100);
-      video.play().catch(reject);
-      drawFrame();
+      video.play().then(() => drawFrame()).catch(reject);
     }, { once: true });
     video.load();
   });
