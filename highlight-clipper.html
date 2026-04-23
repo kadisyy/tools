@@ -60,7 +60,7 @@ header { padding: 52px 0 0; margin-bottom: 48px; }
   transition: color 0.2s;
 }
 .back-link:hover { color: var(--purple); }
-.build {
+.tool-badge {
   font-family: var(--mono); font-size: 10px; color: var(--purple);
   border: 1px solid rgba(124,58,237,0.3); padding: 4px 12px; letter-spacing: 0.1em;
   background: rgba(124,58,237,0.05);
@@ -73,10 +73,12 @@ header { padding: 52px 0 0; margin-bottom: 48px; }
 .page-desc { font-size: 15px; color: var(--text2); line-height: 1.6; }
 
 .drop-zone {
-  border: 2px dashed var(--border2); border-radius: 8px;
+  border: 2px dashed var(--border2); border-radius: 2px;
   padding: 64px 32px; text-align: center; cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
+  background: var(--surface); position: relative;
 }
+.drop-zone:hover { border-color: var(--border2); }
 .drop-zone.drag-over { border-color: var(--pink); background: rgba(255,45,120,0.04); }
 .drop-zone input[type=file] { display: none; }
 .drop-label { font-family: var(--mono); font-size: 13px; color: var(--text3); letter-spacing: 0.1em; }
@@ -128,7 +130,7 @@ footer {
   <header>
     <div class="header-top">
       <a href="index.html" class="back-link">← TOOLBOX</a>
-      <div class="build">BUILD_006</div>
+      <span class="tool-badge">TOOL_006</span>
     </div>
     <h1 class="page-title">燃点剪辑</h1>
     <p class="page-desc">上传长视频，自动检测高爆点，生成多个短视频片段，支持字幕编辑后重新渲染下载。</p>
