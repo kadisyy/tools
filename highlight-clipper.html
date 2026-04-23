@@ -239,7 +239,7 @@ async function analyzeFile(file) {
     setStatus('正在解码音频...', 5);
     const peaks = await analyzeAudio(file);
     setStatus('分析视频帧...', 40);
-    const frameDiffs = await analyzeFrames(file);
+    const frameDiffs = await analyzeFrames(file, (pct) => setStatus(`分析视频帧... ${pct}%`, 40 + pct * 0.3));
     setStatus('计算燃点...', 75);
     const clips = mergeScores(peaks, frameDiffs);
     if (clips.length === 0) {
@@ -291,7 +291,8 @@ async function analyzeAudio(file) {
   }
 }
 
-async function analyzeFrames(file) {
+async function analyzeFrames(file, onProgress) {
+  const STEP = 3; // seek every 3s instead of 1s — 3x faster
   return new Promise(resolve => {
     const url = URL.createObjectURL(file);
     const video = document.createElement('video');
@@ -307,6 +308,7 @@ async function analyzeFrames(file) {
     });
     function seekNext(t) {
       if (t > video.duration) { URL.revokeObjectURL(url); resolve(results); return; }
+      if (onProgress) onProgress(Math.round(t / video.duration * 100));
       video.currentTime = t;
     }
     video.addEventListener('seeked', () => {
@@ -320,7 +322,7 @@ async function analyzeFrames(file) {
         results.push({ t: video.currentTime, diff: diff / (160*90*3*255) });
       }
       prevData = new Uint8ClampedArray(imgData);
-      seekNext(video.currentTime + 1);
+      seekNext(video.currentTime + STEP);
     });
     video.load();
   });
