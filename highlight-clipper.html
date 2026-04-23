@@ -275,6 +275,45 @@ async function analyzeFrames(file) {
     video.load();
   });
 }
+
+function mergeScores(audioPeaks, frameDiffs) {
+  const buckets = {};
+
+  for (const p of audioPeaks) {
+    const t = Math.floor(p.t);
+    buckets[t] = (buckets[t] || 0) + p.score * 0.6;
+  }
+
+  const maxDiff = Math.max(...frameDiffs.map(f => f.diff), 0.001);
+  for (const f of frameDiffs) {
+    const t = Math.floor(f.t);
+    buckets[t] = (buckets[t] || 0) + (f.diff / maxDiff) * 0.4;
+  }
+
+  const sorted = Object.entries(buckets)
+    .map(([t, s]) => ({ t: Number(t), s }))
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 20);
+
+  const raw = sorted.map(p => ({
+    start: Math.max(0, p.t - 10),
+    end: p.t + 10,
+    score: p.s
+  }));
+
+  raw.sort((a, b) => a.start - b.start);
+  const merged = [];
+  for (const c of raw) {
+    if (merged.length && c.start < merged[merged.length-1].end) {
+      merged[merged.length-1].end = Math.max(merged[merged.length-1].end, c.end);
+      merged[merged.length-1].score = Math.max(merged[merged.length-1].score, c.score);
+    } else {
+      merged.push({ ...c });
+    }
+  }
+
+  return merged.sort((a, b) => b.score - a.score).slice(0, 8);
+}
 </script>
 </body>
 </html>
