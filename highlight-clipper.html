@@ -151,8 +151,8 @@ footer {
     <div class="footer-dots"><span></span><span></span><span></span></div>
   </footer>
 </div>
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 <script>
-const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const statusEl = document.getElementById('status');
 const progressBar = document.getElementById('progressBar');
@@ -331,15 +331,12 @@ let ffmpegInstance = null;
 
 async function getFFmpeg() {
   if (ffmpegInstance) return ffmpegInstance;
-  const { FFmpeg } = await import('https://esm.sh/@ffmpeg/ffmpeg@0.12.6');
-  const { fetchFile, toBlobURL } = await import('https://esm.sh/@ffmpeg/util@0.12.1');
-  const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-  const ff = new FFmpeg();
-  await ff.load({
-    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    workerURL: await toBlobURL(`${baseURL}/ffmpeg-core-worker.js`, 'text/javascript'),
+  const { createFFmpeg, fetchFile } = FFmpeg;
+  const ff = createFFmpeg({
+    corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
+    log: false,
   });
+  await ff.load();
   ffmpegInstance = { ff, fetchFile };
   return ffmpegInstance;
 }
@@ -347,7 +344,7 @@ async function getFFmpeg() {
 async function generateClips(file, clips) {
   setStatus('加载 ffmpeg...', 82);
   const { ff, fetchFile } = await getFFmpeg();
-  await ff.writeFile('input.mp4', await fetchFile(file));
+  ff.FS('writeFile', 'input.mp4', await fetchFile(file));
 
   for (let i = 0; i < clips.length; i++) {
     const clip = clips[i];
@@ -355,7 +352,7 @@ async function generateClips(file, clips) {
     clipsEl.appendChild(card);
     await cutClip(ff, fetchFile, clip, i, card);
   }
-  try { await ff.deleteFile('input.mp4'); } catch {}
+  try { ff.FS('unlink', 'input.mp4'); } catch {}
 }
 
 async function cutClip(ff, fetchFile, clip, idx, card) {
@@ -363,25 +360,22 @@ async function cutClip(ff, fetchFile, clip, idx, card) {
   const progressEl = card.querySelector('.clip-progress');
   progressEl.textContent = '剪辑中...';
 
-  const onProgress = ({ progress }) => {
-    progressEl.textContent = `处理中 ${Math.round(progress * 100)}%`;
-  };
-  ff.on('progress', onProgress);
+  ff.setProgress(({ ratio }) => {
+    progressEl.textContent = `处理中 ${Math.round(ratio * 100)}%`;
+  });
 
-  try {
-    await ff.exec([
-      '-ss', String(clip.start),
-      '-to', String(clip.end),
-      '-i', 'input.mp4',
-      '-c', 'copy',
-      outName
-    ]);
-  } finally {
-    ff.off('progress', onProgress);
-  }
+  await ff.run(
+    '-ss', String(clip.start),
+    '-to', String(clip.end),
+    '-i', 'input.mp4',
+    '-c', 'copy',
+    outName
+  );
 
-  const data = await ff.readFile(outName);
-  const blob = new Blob([data], { type: 'video/mp4' });
+  ff.setProgress(() => {});
+
+  const data = ff.FS('readFile', outName);
+  const blob = new Blob([data.buffer], { type: 'video/mp4' });
   clip._blob = blob;
   clip._outName = outName;
 
@@ -447,27 +441,19 @@ async function burnSubtitle(ff, clip, idx, text, progressEl) {
     ? `drawtext=text='${escaped}':fontcolor=white:bordercolor=black:borderw=2:fontsize=24:x=(w-text_w)/2:y=h-60`
     : 'null';
 
-  const onProgress = ({ progress }) => {
-    progressEl.textContent = `烧录中 ${Math.round(progress * 100)}%`;
-  };
-  ff.on('progress', onProgress);
+  ff.setProgress(({ ratio }) => {
+    progressEl.textContent = `烧录中 ${Math.round(ratio * 100)}%`;
+  });
 
-  try { await ff.deleteFile(outName); } catch {}
+  try { ff.FS('unlink', outName); } catch {}
 
-  try {
-    await ff.exec([
-      '-i', inName,
-      '-vf', filterArgs,
-      '-c:a', 'copy',
-      outName
-    ]);
-  } finally {
-    ff.off('progress', onProgress);
-  }
+  await ff.run('-i', inName, '-vf', filterArgs, '-c:a', 'copy', outName);
 
-  const data = await ff.readFile(outName);
-  try { await ff.deleteFile(outName); } catch {}
-  return new Blob([data], { type: 'video/mp4' });
+  ff.setProgress(() => {});
+
+  const data = ff.FS('readFile', outName);
+  try { ff.FS('unlink', outName); } catch {}
+  return new Blob([data.buffer], { type: 'video/mp4' });
 }
 
 function createClipCard(idx, clip) {
