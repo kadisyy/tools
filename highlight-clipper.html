@@ -180,6 +180,17 @@ footer {
     <div class="drop-label">拖拽视频文件到此处，或点击选择<br><span style="font-size:11px">支持 MP4 / MOV / MKV / AVI / WEBM</span></div>
   </div>
 
+  <div id="skipCtrl" style="display:none;margin-top:16px;display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+    <label style="font-family:var(--mono);font-size:11px;color:var(--text2);letter-spacing:0.08em;display:flex;align-items:center;gap:8px">
+      跳过片头 <input type="number" id="skipIntro" value="90" min="0" max="600" step="10"
+        style="width:60px;padding:4px 8px;border:1.5px solid var(--border2);border-radius:2px;font-family:var(--mono);font-size:12px;background:var(--surface)"> 秒
+    </label>
+    <label style="font-family:var(--mono);font-size:11px;color:var(--text2);letter-spacing:0.08em;display:flex;align-items:center;gap:8px">
+      跳过片尾 <input type="number" id="skipOutro" value="90" min="0" max="600" step="10"
+        style="width:60px;padding:4px 8px;border:1.5px solid var(--border2);border-radius:2px;font-family:var(--mono);font-size:12px;background:var(--surface)"> 秒
+    </label>
+  </div>
+
   <div id="status"></div>
   <div class="progress-bar" id="progressBar" style="display:none">
     <div class="progress-fill" id="progressFill"></div>
@@ -226,11 +237,12 @@ function setStatus(msg, pct) {
 function loadFile(file) {
   sourceFile = file;
   clipsEl.innerHTML = '';
-  // Show video preview
+  // Show video preview & skip controls
   const url = URL.createObjectURL(file);
   mainVideo.src = url;
   videoWrap.classList.add('visible');
   dropZone.style.display = 'none';
+  document.getElementById('skipCtrl').style.display = 'flex';
   // Start analysis
   analyzeFile(file);
 }
@@ -243,7 +255,10 @@ async function analyzeFile(file) {
     setStatus('分析视频帧...', 40);
     const frameDiffs = await analyzeFrames(file, (pct) => setStatus(`分析视频帧... ${pct}%`, 40 + pct * 0.3));
     setStatus('计算燃点...', 75);
-    const clips = mergeScores(peaks, frameDiffs);
+    const duration = mainVideo.duration || 0;
+    const skipIntro = Number(document.getElementById('skipIntro').value) || 0;
+    const skipOutro = Number(document.getElementById('skipOutro').value) || 0;
+    const clips = mergeScores(peaks, frameDiffs, duration, skipIntro, skipOutro);
     if (clips.length === 0) {
       setStatus('未检测到明显燃点，请手动调整');
       return;
@@ -358,15 +373,19 @@ async function analyzeFrames(file, onProgress) {
   });
 }
 
-function mergeScores(audioPeaks, frameDiffs) {
+function mergeScores(audioPeaks, frameDiffs, duration, skipIntro, skipOutro) {
+  const minT = skipIntro;
+  const maxT = duration > 0 ? duration - skipOutro : Infinity;
   const buckets = {};
   for (const p of audioPeaks) {
     const t = Math.floor(p.t);
+    if (t < minT || t > maxT) continue;
     buckets[t] = (buckets[t] || 0) + p.score * 0.6;
   }
   const maxDiff = frameDiffs.reduce((m, f) => Math.max(m, f.diff), 0.001);
   for (const f of frameDiffs) {
     const t = Math.floor(f.t);
+    if (t < minT || t > maxT) continue;
     buckets[t] = (buckets[t] || 0) + (f.diff / maxDiff) * 0.4;
   }
   const sorted = Object.entries(buckets).map(([t,s]) => ({t:Number(t),s})).sort((a,b)=>b.s-a.s).slice(0,20);
